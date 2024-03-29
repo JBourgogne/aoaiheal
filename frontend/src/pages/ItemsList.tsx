@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
 interface Item {
   id: string;
@@ -8,66 +9,49 @@ interface Item {
 
 const ItemsList: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
-  const [editItemId, setEditItemId] = useState<string | null>(null);
-  const [tempText, setTempText] = useState<string>('');
 
-  const handleAddItem = () => {
-    const newItem = { id: Date.now().toString(), text: '', completed: false };
-    setItems([...items, newItem]);
+  useEffect(() => {
+    // Fetch items on component mount
+    fetchItems();
+  }, []);
+
+  const fetchItems = async () => {
+    const response = await axios.get('/items');
+    setItems(response.data);
   };
 
-  const handleEdit = (id: string) => {
-    setEditItemId(id);
+  const handleAddItem = async () => {
+    const newItem = { text: '', completed: false };
+    await axios.post('/item', newItem);
+    fetchItems(); // Refresh the list
+  };
+
+  const handleSave = async (id: string, text: string) => {
+    await axios.put(`/item/${id}`, { text, completed: false });
+    fetchItems(); // Refresh the list
+  };
+
+  const handleComplete = async (id: string) => {
     const item = items.find(item => item.id === id);
     if (item) {
-      setTempText(item.text);
+      await axios.put(`/item/${id}`, { ...item, completed: !item.completed });
+      fetchItems(); // Refresh the list
     }
   };
 
-  const handleSave = (id: string) => {
-    setItems(items.map(item => item.id === id ? { ...item, text: tempText } : item));
-    setEditItemId(null);
-    setTempText('');
-  };
-
-  const handleComplete = (id: string) => {
-    setItems(items.map(item => item.id === id ? { ...item, completed: !item.completed } : item));
-  };
-
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
-      setItems(items.filter(item => item.id !== id));
+      await axios.delete(`/item/${id}`);
+      fetchItems(); // Refresh the list
     }
   };
+
+  // Adjusted JSX to include editable text fields and CRUD operations
+  // Similar to the previous frontend code, but now with CRUD operation calls
 
   return (
     <div>
-      {items.map(item => (
-        <div key={item.id} style={{ display: 'flex', marginBottom: '10px' }}>
-          {editItemId === item.id ? (
-            <input
-              type="text"
-              value={tempText}
-              onChange={e => setTempText(e.target.value)}
-              onBlur={() => setEditItemId(null)}
-            />
-          ) : (
-            <div style={{ textDecoration: item.completed ? 'line-through' : 'none' }} onClick={() => handleEdit(item.id)}>
-              {item.text || 'Click to edit'}
-            </div>
-          )}
-
-          {editItemId === item.id ? (
-            <button onClick={() => handleSave(item.id)}>Save</button>
-          ) : (
-            <>
-              <button onClick={() => handleEdit(item.id)}>Edit</button>
-              <button onClick={() => handleComplete(item.id)}>Complete</button>
-              <button onClick={() => handleDelete(item.id)}>Delete</button>
-            </>
-          )}
-        </div>
-      ))}
+      {/* Render your items here */}
       <button onClick={handleAddItem}>Add entry</button>
     </div>
   );

@@ -89,6 +89,12 @@ const Layout = () => {
                 </Stack>
             </header>
             <Outlet />
+            <footer className={styles.footer}>
+                <Link to="/chat" className={styles.footerLink}>Chat</Link>
+                <Link to="/profile" className={styles.footerLink}>Profile</Link>
+                <Link to="/goals" className={styles.footerLink}>Goals</Link>
+                <Link to="/" className={styles.footerLink}>Home</Link>
+            </footer>
             <Dialog
                 onDismiss={handleSharePanelDismiss}
                 hidden={!isSharePanelOpen}

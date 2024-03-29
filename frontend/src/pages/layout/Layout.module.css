@@ -112,6 +112,23 @@
     color: #242424;
 }
 
+.footer {
+    background-color: #f2f2f2; /* Footer background color */
+    padding: 10px 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px; /* Space between links */
+    border-top: 1px solid #d1d1d1; /* A light border for the footer top */
+}
+
+/* Style for the footer links */
+.footerLink {
+    text-decoration: none;
+    color: #242424; /* Link color */
+    font-weight: 600;
+}
+
+
 @media (max-width: 480px) {
     .headerTitleContainer {
         margin-left: 4px;
