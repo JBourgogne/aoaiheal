@@ -19,6 +19,7 @@ from openai import AsyncAzureOpenAI
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
+from azure.cosmos import CosmosClient
 
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
 # Quart Blueprint to group routes, static files, and templates
@@ -120,11 +121,15 @@ AZURE_COSMOSDB_MONGO_VCORE_VECTOR_COLUMNS = os.environ.get("AZURE_COSMOSDB_MONGO
 SHOULD_STREAM = True if AZURE_OPENAI_STREAM.lower() == "true" else False
 
 # Chat History CosmosDB Integration Settings
-AZURE_COSMOSDB_DATABASE = os.environ.get("AZURE_COSMOSDB_DATABASE")
+AZURE_COSMOSDB_CONVERSATIONS_DATABASE = os.environ.get("AZURE_COSMOSDB_DATABASE")
 AZURE_COSMOSDB_ACCOUNT = os.environ.get("AZURE_COSMOSDB_ACCOUNT")
 AZURE_COSMOSDB_CONVERSATIONS_CONTAINER = os.environ.get("AZURE_COSMOSDB_CONVERSATIONS_CONTAINER")
 AZURE_COSMOSDB_ACCOUNT_KEY = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY")
 AZURE_COSMOSDB_ENABLE_FEEDBACK = os.environ.get("AZURE_COSMOSDB_ENABLE_FEEDBACK", "true").lower() == "true"
+AZURE_COSMOSDB_USER_DETAILS_CONTAINER = 'userdetails'
+AZURE_COSMOSDB_GOALS_CONTAINER = 'goals'
+AZURE_COSMOSDB_USER_DETAILS_DATABASE = 'userdetails'
+AZURE_COSMOSDB_GOALS_DATABASE = 'goals'
 
 # Elasticsearch Integration Settings
 ELASTICSEARCH_ENDPOINT = os.environ.get("ELASTICSEARCH_ENDPOINT")
@@ -171,7 +176,7 @@ AZURE_MLINDEX_QUERY_TYPE = os.environ.get("AZURE_MLINDEX_QUERY_TYPE")
 
 # Frontend Settings via Environment Variables
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "true").lower() == "true"
-CHAT_HISTORY_ENABLED = AZURE_COSMOSDB_ACCOUNT and AZURE_COSMOSDB_DATABASE and AZURE_COSMOSDB_CONVERSATIONS_CONTAINER
+CHAT_HISTORY_ENABLED = AZURE_COSMOSDB_ACCOUNT and AZURE_COSMOSDB_CONVERSATIONS_DATABASE and AZURE_COSMOSDB_CONVERSATIONS_CONTAINER
 frontend_settings = { 
     "auth_enabled": AUTH_ENABLED, 
     "feedback_enabled": AZURE_COSMOSDB_ENABLE_FEEDBACK and CHAT_HISTORY_ENABLED,
@@ -282,7 +287,7 @@ def init_cosmosdb_client():
             cosmos_conversation_client = CosmosConversationClient(
                 cosmosdb_endpoint=cosmos_endpoint, 
                 credential=credential, 
-                database_name=AZURE_COSMOSDB_DATABASE,
+                database_name=AZURE_COSMOSDB_CONVERSATIONS_DATABASE,
                 container_name=AZURE_COSMOSDB_CONVERSATIONS_CONTAINER,
                 enable_message_feedback=AZURE_COSMOSDB_ENABLE_FEEDBACK
             )
@@ -294,6 +299,52 @@ def init_cosmosdb_client():
         logging.debug("CosmosDB not configured")
         
     return cosmos_conversation_client
+
+# Initialize CosmosDB Client for User Details
+def init_user_details_cosmosdb_client():
+    user_details_client = None
+    try:
+        cosmos_endpoint = f'https://{AZURE_COSMOSDB_ACCOUNT}.documents.azure.com:443/'
+
+        if not AZURE_COSMOSDB_ACCOUNT_KEY:
+            from azure.identity import DefaultAzureCredential
+            credential = DefaultAzureCredential()
+        else:
+            credential = AZURE_COSMOSDB_ACCOUNT_KEY
+
+        client = CosmosClient(cosmos_endpoint, credential=credential)
+        database = client.get_database_client(AZURE_COSMOSDB_USER_DETAILS_DATABASE)
+        container = database.get_container_client(AZURE_COSMOSDB_USER_DETAILS_CONTAINER)
+
+        user_details_client = {"client": client, "database": database, "container": container}
+    except Exception as e:
+        logging.exception("Exception in User Details CosmosDB initialization", e)
+        raise e
+
+    return user_details_client
+
+# Initialize CosmosDB Client for Goals
+def init_goals_cosmosdb_client():
+    goals_client = None
+    try:
+        cosmos_endpoint = f'https://{AZURE_COSMOSDB_ACCOUNT}.documents.azure.com:443/'
+
+        if not AZURE_COSMOSDB_ACCOUNT_KEY:
+            from azure.identity import DefaultAzureCredential
+            credential = DefaultAzureCredential()
+        else:
+            credential = AZURE_COSMOSDB_ACCOUNT_KEY
+
+        client = CosmosClient(cosmos_endpoint, credential=credential)
+        database = client.get_database_client(AZURE_COSMOSDB_GOALS_DATABASE)
+        container = database.get_container_client(AZURE_COSMOSDB_GOALS_CONTAINER)
+
+        goals_client = {"client": client, "database": database, "container": container}
+    except Exception as e:
+        logging.exception("Exception in Goals CosmosDB initialization", e)
+        raise e
+
+    return goals_client
 
 # Connect and Get Configured Data Sources
 def get_configured_data_source():
@@ -943,7 +994,7 @@ async def ensure_cosmos():
         if "Invalid credentials" in cosmos_exception:
             return jsonify({"error": cosmos_exception}), 401
         elif "Invalid CosmosDB database name" in cosmos_exception:
-            return jsonify({"error": f"{cosmos_exception} {AZURE_COSMOSDB_DATABASE} for account {AZURE_COSMOSDB_ACCOUNT}"}), 422
+            return jsonify({"error": f"{cosmos_exception} {AZURE_COSMOSDB_CONVERSATIONS_DATABASE} for account {AZURE_COSMOSDB_ACCOUNT}"}), 422
         elif "Invalid CosmosDB container name" in cosmos_exception:
             return jsonify({"error": f"{cosmos_exception}: {AZURE_COSMOSDB_CONVERSATIONS_CONTAINER}"}), 422
         else:
@@ -970,6 +1021,116 @@ async def generate_title(conversation_messages):
         return title
     except Exception as e:
         return messages[-2]['content']
+@bp.route("/profile/details", methods=["GET"])
+async def get_user_profile():
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user['user_principal_id']
 
+    try:
+        # Query the user_details_container directly to fetch the user profile
+        query = "SELECT * FROM c WHERE c.id = @user_id"
+        parameters = [{"name": "@user_id", "value": user_id}]
+        items = list(AZURE_COSMOSDB_USER_DETAILS_CONTAINER.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True
+        ))
+
+        if not items:
+            return jsonify({"error": "User profile not found."}), 404
+
+        user_profile = items[0]  # Assuming user_id is unique, this should be the user's profile
+
+        # Optionally, format the user profile data here
+        formatted_profile = {
+            'id': user_profile['id'],
+            'name': user_profile.get('name', 'N/A'),
+            'email': user_profile.get('email', 'N/A'),
+            # Add other fields as needed
+        }
+
+        return jsonify(formatted_profile), 200
+    except Exception as e:
+        # It's a good practice to catch specific exceptions, e.g., Cosmos exceptions
+        return jsonify({"error": str(e)}), 500
+
+@bp.route("/profile/update", methods=["PUT"])
+async def update_user_profile():
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user['user_principal_id']
+
+    try:
+        # Get the updated user details from the request
+        request_json = await request.get_json()
+        if not request_json:
+            raise ValueError("No data provided")
+
+        # Fetch the existing document to get the partition key value if needed
+        # This step assumes your container might have a different partition key
+        # Adjust the query as per your database schema if user_id is not the partition key
+        existing_items = list(AZURE_COSMOSDB_USER_DETAILS_CONTAINER.query_items(
+            query="SELECT * FROM c WHERE c.id = @user_id",
+            parameters=[{"name": "@user_id", "value": user_id}],
+            enable_cross_partition_query=True
+        ))
+        if not existing_items:
+            return jsonify({"error": "User profile not found."}), 404
+
+        # Update user details in CosmosDB using upsert_item method
+        # Ensure the document structure matches your CosmosDB schema
+        updated_profile = {
+            'id': user_id,
+            **request_json
+        }
+        AZURE_COSMOSDB_USER_DETAILS_CONTAINER.upsert_item(updated_profile)
+
+        return jsonify({'success': True, 'message': 'Profile updated successfully'}), 200
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logging.exception("Exception in /profile/update")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/goals', methods=['GET'])
+async def get_goals():
+    # Fetch all goals from the goals_container
+    goals = list(AZURE_COSMOSDB_GOALS_CONTAINER.query_items(
+        query="SELECT * FROM c",
+        enable_cross_partition_query=True
+    ))
+    return jsonify(goals), 200
+
+@bp.route('/goal', methods=['POST'])
+async def create_goal():
+    data = await request.get_json()
+    response = AZURE_COSMOSDB_GOALS_CONTAINER.create_item(body=data)
+    return jsonify(response), 201
+
+@bp.route('/goal/<id>', methods=['PUT'])
+async def update_goal(id):
+    data = await request.get_json()
+    # Fetch the existing goal to get the partition key value if needed
+    existing_goals = list(AZURE_COSMOSDB_GOALS_CONTAINER.query_items(
+        query="SELECT * FROM c WHERE c.id = @id",
+        parameters=[{"name": "@id", "value": id}],
+        enable_cross_partition_query=True
+    ))
+    if not existing_goals:
+        return jsonify({"error": "Goal not found."}), 404
+
+    # Assuming 'id' is used as the goal id within CosmosDB
+    goal_response = AZURE_COSMOSDB_GOALS_CONTAINER.upsert_item({
+        'id': id,
+        **data
+    })
+    return jsonify(goal_response), 200
+
+@bp.route('/goal/<id>', methods=['DELETE'])
+async def delete_goal(id):
+    # Note: This requires knowing the partition key value, adjusting accordingly
+    partition_key_value = id  # Adjust this based on your partition key setup
+    AZURE_COSMOSDB_GOALS_CONTAINER.delete_item(item=id, partition_key=partition_key_value)
+    return jsonify({'message': 'Goal deleted successfully'}), 204
 
 app = create_app()
