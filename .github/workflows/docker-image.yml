@@ -16,9 +16,9 @@ jobs:
       uses: Azure/docker-login@v1
       with:
         # Container registry username
-        username: ${{ secrets.SAMPLEAPP_ACR_USERNAME }}
+        username: ${{ secrets.DOCKER_USERNAME }}
         # Container registry password
-        password: ${{ secrets.SAMPLEAPP_ACR_PASSWORD }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
         # Container registry server url
         login-server: sampleappaoaichatgpt.azurecr.io
         
