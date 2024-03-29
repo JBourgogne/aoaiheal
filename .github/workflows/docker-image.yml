@@ -6,27 +6,29 @@ on:
     - main
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - name: Azure Container Registry Login
-      uses: Azure/docker-login@v1
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
       with:
-        # Container registry username
-        username: ${{ secrets.DOCKER_USERNAME }}
-        # Container registry password
-        password: ${{ secrets.DOCKER_PASSWORD }}
-        # Container registry server url
-        login-server: sampleappaoaichatgpt.azurecr.io
-        
+        # GitHub Container Registry username (GitHub username)
+        username: ${{ github.repository_owner }}
+        # GitHub Container Registry password (Personal Access Token)
+        password: ${{ secrets.GITHUB_TOKEN }}
+        # GitHub Container Registry server URL
+        registry: ghcr.io
+
     - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run:         
-        docker build . --file Dockerfile --tag sampleappaoaichatgpt.azurecr.io/sample-app-aoai-chatgpt:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER;
-        docker tag sampleappaoaichatgpt.azurecr.io/sample-app-aoai-chatgpt:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER sampleappaoaichatgpt.azurecr.io/sample-app-aoai-chatgpt:latest;
-        docker push sampleappaoaichatgpt.azurecr.io/sample-app-aoai-chatgpt:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER;
-        docker push sampleappaoaichatgpt.azurecr.io/sample-app-aoai-chatgpt:latest;
-      
+
+    - name: Build and Push Docker image
+      run: |
+        IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/healio
+        # Build the Docker image
+        docker build . --file Dockerfile --tag $IMAGE_NAME:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER
+        # Tag the built image as 'latest'
+        docker tag $IMAGE_NAME:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER $IMAGE_NAME:latest
+        # Push both tags to GitHub Container Registry
+        docker push $IMAGE_NAME:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER
+        docker push $IMAGE_NAME:latest
