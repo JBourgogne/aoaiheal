@@ -357,7 +357,7 @@ def init_cosmosdb_client():
     cosmos_conversation_client = None
     if CHAT_HISTORY_ENABLED:
         try:
-            cosmos_endpoint = 'https://{AZURE_COSMOSDB_ACCOUNT}.documents.azure.com:443/'
+            cosmos_endpoint = f'https://{AZURE_COSMOSDB_ACCOUNT}.documents.azure.com:443/'
 
             if not AZURE_COSMOSDB_ACCOUNT_KEY:
                 credential = DefaultAzureCredential()
