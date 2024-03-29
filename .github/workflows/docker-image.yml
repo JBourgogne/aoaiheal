@@ -21,14 +21,15 @@ jobs:
         registry: ghcr.io
 
     - uses: actions/checkout@v3
-
     - name: Build and Push Docker image
       run: |
         IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/healio
+        IMAGE_NAME_LOWER=$(echo $IMAGE_NAME | tr '[:upper:]' '[:lower:]')
         # Build the Docker image
-        docker build . --file Dockerfile --tag $IMAGE_NAME:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER
+        docker build . --file Dockerfile --tag $IMAGE_NAME_LOWER:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER
         # Tag the built image as 'latest'
-        docker tag $IMAGE_NAME:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER $IMAGE_NAME:latest
+        docker tag $IMAGE_NAME_LOWER:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER $IMAGE_NAME_LOWER:latest
         # Push both tags to GitHub Container Registry
-        docker push $IMAGE_NAME:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER
-        docker push $IMAGE_NAME:latest
+        docker push $IMAGE_NAME_LOWER:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER
+        docker push $IMAGE_NAME_LOWER:latest
+      shell: /usr/bin/bash -e {0}
