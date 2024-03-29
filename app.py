@@ -21,10 +21,10 @@ from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
 
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
-
+# Quart Blueprint to group routes, static files, and templates
 bp = Blueprint("routes", __name__, static_folder="static", template_folder="static")
 
-# UI configuration (optional)
+# UI configuration
 UI_TITLE = os.environ.get("UI_TITLE") or "HEALio"
 UI_LOGO = os.environ.get("UI_LOGO")
 UI_CHAT_LOGO = os.environ.get("UI_CHAT_LOGO")
@@ -33,13 +33,14 @@ UI_CHAT_DESCRIPTION = os.environ.get("UI_CHAT_DESCRIPTION") or "This chatbot is 
 UI_FAVICON = os.environ.get("UI_FAVICON") or "/favicon.ico"
 UI_SHOW_SHARE_BUTTON = os.environ.get("UI_SHOW_SHARE_BUTTON", "true").lower() == "true"
 
+# Create App
 def create_app():
     app = Quart(__name__)
     app.register_blueprint(bp)
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     return app
 
-
+# Base Route
 @bp.route("/")
 async def index():
     return await render_template("index.html", title=UI_TITLE, favicon=UI_FAVICON)
@@ -52,6 +53,7 @@ async def favicon():
 async def assets(path):
     return await send_from_directory("static/assets", path)
 
+# Load environment variables
 load_dotenv()
 
 # Debug settings
@@ -183,6 +185,7 @@ frontend_settings = {
     }
 }
 
+# Check if data source is configured
 def should_use_data():
     global DATASOURCE_TYPE
     if AZURE_SEARCH_SERVICE and AZURE_SEARCH_INDEX:
@@ -264,7 +267,7 @@ def init_openai_client(use_data=SHOULD_USE_DATA):
         azure_openai_client = None
         raise e
 
-
+# Initialize CosmosDB Client for Chat History
 def init_cosmosdb_client():
     cosmos_conversation_client = None
     if CHAT_HISTORY_ENABLED:
@@ -292,7 +295,7 @@ def init_cosmosdb_client():
         
     return cosmos_conversation_client
 
-
+# Connect and Get Configured Data Sources
 def get_configured_data_source():
     data_source = {}
     query_type = "simple"
@@ -485,6 +488,7 @@ def get_configured_data_source():
 
     return data_source
 
+# Clean up the model args and log the request
 def prepare_model_args(request_body):
     request_messages = request_body.get("messages", [])
     messages = []
@@ -538,6 +542,7 @@ def prepare_model_args(request_body):
     
     return model_args
 
+# Chat Request Handler
 async def send_chat_request(request):
     model_args = prepare_model_args(request)
 
@@ -706,6 +711,7 @@ async def update_conversation():
         logging.exception("Exception in /history/update")
         return jsonify({"error": str(e)}), 500
 
+# Update message feedback
 @bp.route("/history/message_feedback", methods=["POST"])
 async def update_message():
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
@@ -734,7 +740,7 @@ async def update_message():
         logging.exception("Exception in /history/message_feedback")
         return jsonify({"error": str(e)}), 500
 
-
+# Delete conversation
 @bp.route("/history/delete", methods=["DELETE"])
 async def delete_conversation():
     ## get the user id from the request headers
@@ -767,7 +773,7 @@ async def delete_conversation():
         logging.exception("Exception in /history/delete")
         return jsonify({"error": str(e)}), 500
 
-
+# List conversations
 @bp.route("/history/list", methods=["GET"])
 async def list_conversations():
     offset = request.args.get("offset", 0)
@@ -789,7 +795,7 @@ async def list_conversations():
 
     return jsonify(conversations), 200
 
-
+# Get conversation
 @bp.route("/history/read", methods=["POST"])
 async def get_conversation():
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
@@ -822,6 +828,7 @@ async def get_conversation():
     await cosmos_conversation_client.cosmosdb_client.close()
     return jsonify({"conversation_id": conversation_id, "messages": messages}), 200
 
+# Rename conversation
 @bp.route("/history/rename", methods=["POST"])
 async def rename_conversation():
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
@@ -854,6 +861,7 @@ async def rename_conversation():
     await cosmos_conversation_client.cosmosdb_client.close()
     return jsonify(updated_conversation), 200
 
+# Delete all conversations
 @bp.route("/history/delete_all", methods=["DELETE"])
 async def delete_all_conversations():
     ## get the user id from the request headers
@@ -885,6 +893,7 @@ async def delete_all_conversations():
         logging.exception("Exception in /history/delete_all")
         return jsonify({"error": str(e)}), 500
 
+# Clear messages in conversation
 @bp.route("/history/clear", methods=["POST"])
 async def clear_messages():
     ## get the user id from the request headers
@@ -912,7 +921,7 @@ async def clear_messages():
         logging.exception("Exception in /history/clear_messages")
         return jsonify({"error": str(e)}), 500
 
-
+# Ensure CosmosDB is configured
 @bp.route("/history/ensure", methods=["GET"])
 async def ensure_cosmos():
     if not AZURE_COSMOSDB_ACCOUNT:
@@ -940,7 +949,7 @@ async def ensure_cosmos():
         else:
             return jsonify({"error": "CosmosDB is not working"}), 500
 
-
+# Generate a title for the conversation
 async def generate_title(conversation_messages):
     ## make sure the messages are sorted by _ts descending
     title_prompt = 'Summarize the conversation so far into a 4-word or less title. Do not use any quotation marks or punctuation. Respond with a json object in the format {{"title": string}}. Do not include any other commentary or description.'
