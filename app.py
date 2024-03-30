@@ -121,7 +121,7 @@ AZURE_COSMOSDB_MONGO_VCORE_VECTOR_COLUMNS = os.environ.get("AZURE_COSMOSDB_MONGO
 SHOULD_STREAM = True if AZURE_OPENAI_STREAM.lower() == "true" else False
 
 # Chat History CosmosDB Integration Settings
-AZURE_COSMOSDB_CONVERSATIONS_DATABASE = os.environ.get("AZURE_COSMOSDB_DATABASE")
+AZURE_COSMOSDB_DATABASE = os.environ.get("AZURE_COSMOSDB_DATABASE")
 AZURE_COSMOSDB_ACCOUNT = os.environ.get("AZURE_COSMOSDB_ACCOUNT")
 AZURE_COSMOSDB_CONVERSATIONS_CONTAINER = os.environ.get("AZURE_COSMOSDB_CONVERSATIONS_CONTAINER")
 AZURE_COSMOSDB_ACCOUNT_KEY = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY")
@@ -176,7 +176,7 @@ AZURE_MLINDEX_QUERY_TYPE = os.environ.get("AZURE_MLINDEX_QUERY_TYPE")
 
 # Frontend Settings via Environment Variables
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "true").lower() == "true"
-CHAT_HISTORY_ENABLED = AZURE_COSMOSDB_ACCOUNT and AZURE_COSMOSDB_CONVERSATIONS_DATABASE and AZURE_COSMOSDB_CONVERSATIONS_CONTAINER
+CHAT_HISTORY_ENABLED = AZURE_COSMOSDB_ACCOUNT and AZURE_COSMOSDB_DATABASE and AZURE_COSMOSDB_CONVERSATIONS_CONTAINER
 frontend_settings = { 
     "auth_enabled": AUTH_ENABLED, 
     "feedback_enabled": AZURE_COSMOSDB_ENABLE_FEEDBACK and CHAT_HISTORY_ENABLED,
@@ -287,7 +287,7 @@ def init_cosmosdb_client():
             cosmos_conversation_client = CosmosConversationClient(
                 cosmosdb_endpoint=cosmos_endpoint, 
                 credential=credential, 
-                database_name=AZURE_COSMOSDB_CONVERSATIONS_DATABASE,
+                database_name=AZURE_COSMOSDB_DATABASE,
                 container_name=AZURE_COSMOSDB_CONVERSATIONS_CONTAINER,
                 enable_message_feedback=AZURE_COSMOSDB_ENABLE_FEEDBACK
             )
@@ -994,7 +994,7 @@ async def ensure_cosmos():
         if "Invalid credentials" in cosmos_exception:
             return jsonify({"error": cosmos_exception}), 401
         elif "Invalid CosmosDB database name" in cosmos_exception:
-            return jsonify({"error": f"{cosmos_exception} {AZURE_COSMOSDB_CONVERSATIONS_DATABASE} for account {AZURE_COSMOSDB_ACCOUNT}"}), 422
+            return jsonify({"error": f"{cosmos_exception} {AZURE_COSMOSDB_DATABASE} for account {AZURE_COSMOSDB_ACCOUNT}"}), 422
         elif "Invalid CosmosDB container name" in cosmos_exception:
             return jsonify({"error": f"{cosmos_exception}: {AZURE_COSMOSDB_CONVERSATIONS_CONTAINER}"}), 422
         else:
