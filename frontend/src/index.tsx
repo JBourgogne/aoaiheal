@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { initializeIcons } from "@fluentui/react";
 
 import "./index.css";
@@ -13,23 +13,21 @@ import { AppStateProvider } from "./state/AppProvider";
 import ProfileScreen from "./pages/ProfileScreen";
 import ItemsList from "./pages/ItemsList";
 
-
-initializeIcons();
-
-export default function App() {
+function App() {
+    initializeIcons(); // Ensure this is called once in your app entry file
     return (
         <AppStateProvider>
-            <HashRouter>
+            <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<Layout />}>
-                        <Route index element={<Chat />} />
                         <Route index element={<HomeScreen />} />
-                        <Route index element={<ProfileScreen />} />
-                        <Route index element={<ItemsList />} />
+                        <Route path="chat" element={<Chat />} />
+                        <Route path="profile" element={<ProfileScreen />} />
+                        <Route path="items" element={<ItemsList />} />
                         <Route path="*" element={<NoPage />} />
                     </Route>
                 </Routes>
-            </HashRouter>
+            </BrowserRouter>
         </AppStateProvider>
     );
 }
