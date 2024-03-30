@@ -33,3 +33,19 @@ jobs:
         docker push $IMAGE_NAME_LOWER:$(date +'%Y-%m-%d')_$GITHUB_RUN_NUMBER
         docker push $IMAGE_NAME_LOWER:latest
       shell: /usr/bin/bash -e {0}
+    - name: Install Azure CLI
+      run: |
+        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Install Azure Developer CLI
+      run: |
+        az extension add --name azure-dev --upgrade
+
+    - name: Deploy to Azure using Azure Developer CLI
+      run: |
+        azd up --project ./azure.yaml
