@@ -7,6 +7,7 @@ import { useContext, useEffect, useState } from "react";
 import { HistoryButton, ShareButton } from "../../components/common/Button";
 import { AppStateContext } from "../../state/AppProvider";
 import { CosmosDBStatus } from "../../api";
+import { MdChat, MdPerson, MdList, MdHome } from 'react-icons/md';
 
 const Layout = () => {
     const [isSharePanelOpen, setIsSharePanelOpen] = useState<boolean>(false);
@@ -88,10 +89,30 @@ const Layout = () => {
             </header>
             <Outlet />
             <footer className={styles.footer}>
-                <Link to="/chat" className={styles.footerLink}>Chat</Link>
-                <Link to="/profile" className={styles.footerLink}>Profile</Link>
-                <Link to="/goals" className={styles.footerLink}>Goals</Link>
-                <Link to="/" className={styles.footerLink}>Home</Link>
+                <div className={styles.footerItem}>
+                    <Link to="/chat" className={styles.footerLink}>
+                    <MdChat className={styles.footerIcon} />
+                    Chat
+                </Link>
+                </div>
+                <div className={styles.footerItem}>
+                    <Link to="/profile" className={styles.footerLink}>
+                        <MdPerson className={styles.footerIcon} />
+                        Profile
+                    </Link>
+                </div>
+                <div className={styles.footerItem}>
+                    <Link to="/items" className={styles.footerLink}>
+                        <MdList className={styles.footerIcon} />
+                        Goals
+                </Link>
+                </div>
+                <div className={styles.footerItem}>
+                    <Link to="/" className={styles.footerLink}>
+                        <MdHome className={styles.footerIcon} />
+                        Home
+                    </Link>
+                </div>
             </footer>
             <Dialog
                 onDismiss={handleSharePanelDismiss}
