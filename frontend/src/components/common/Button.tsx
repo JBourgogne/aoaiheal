@@ -19,12 +19,34 @@ export const ShareButton: React.FC<ButtonProps> = ({ onClick, text }) => {
   )
 }
 
+export const FeedbackButton: React.FC<ButtonProps> = ({ onClick, text }) => {
+
+  return (
+    <CommandBarButton
+      className={styles.feedbackButtonRoot}
+      iconProps={{ iconName: 'Feedback' }}
+      onClick={onClick}
+      text={text}
+    />
+  )
+}
+
 export const HistoryButton: React.FC<ButtonProps> = ({ onClick, text }) => {
   return (
     <DefaultButton
       className={styles.historyButtonRoot}
       text={text}
       iconProps={{ iconName: 'History' }}
+      onClick={onClick}
+    />
+  )
+}
+export const PrimaryButton: React.FC<ButtonProps> = ({ onClick, text }) => {
+  return (
+    <DefaultButton
+      className={styles.PrimaryButtonRoot}
+      text={text}
+      iconProps={{ iconName: 'Primary' }}
       onClick={onClick}
     />
   )

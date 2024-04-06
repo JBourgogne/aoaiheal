@@ -132,3 +132,87 @@ export enum Feedback {
     Manipulative = "manipulative",
     OtherHarmful = "other_harmlful"
 }
+
+export interface Answer {
+    questionId: string;
+    questionText: string;
+    answerType: 'single choice' | 'multi-choice' | 'text';
+    options?: string[]; // Present for single choice and multi-choice questions
+    answer: string | string[]; // Could be an array for multi-choice answers
+  }
+  
+  export interface UserDetails {
+    userId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    userPhone: string;
+    userEmail: string;
+    sex: 'Male' | 'Female' | 'Other'; // Assuming this is a single choice question
+    healthConditions?: string[]; // Assuming this is a multi-choice question
+    medicalHistory: string; // Assuming this is a free text response
+    medications: string; // Assuming this is a free text response
+    allergies: string; // Assuming this is a free text response
+    dietaryPreferences?: string[]; // Assuming this is a multi-choice question
+    physicalActivityLevel: 'Sedentary' | 'Lightly active' | 'Moderately active' | 'Very active' | 'Extra active'; // Assuming this is a single choice question
+    sleepPatterns: 'Consistent' | 'Inconsistent' | 'Insomnia' | 'Hypersomnia' | 'Other'; // Assuming this is a single choice question
+    tobaccoAlcoholDrugUse?: string[]; // Assuming this is a multi-choice question
+    healthInsuranceProvider: string; // Assuming this is a free text response
+    primaryCarePhysicianDetails: {
+      name: string;
+      email: string;
+      address: string;
+      provider: string;
+    };
+    emergencyContactInformation: {
+      name: string;
+      phone: string;
+      relationship: string;
+    };
+    healthGoals: string; // Assuming this is a free text response
+    // Include any additional fields as necessary
+    answers: Answer[]; // This could be used if you prefer to store all answers in a structured array
+  }
+export interface Answer {
+  questionId: string;
+  questionText: string;
+  answerType: 'single choice' | 'multi-choice' | 'text';
+  options?: string[]; // Present for single choice and multi-choice questions
+  answer: string | string[]; // Could be an array for multi-choice answers
+}
+
+export interface UserDetails {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  userPhone: string;
+  userEmail: string;
+  sex: 'Male' | 'Female' | 'Other'; // Assuming this is a single choice question
+  healthConditions?: string[]; // Assuming this is a multi-choice question
+  medicalHistory: string; // Assuming this is a free text response
+  medications: string; // Assuming this is a free text response
+  allergies: string; // Assuming this is a free text response
+  dietaryPreferences?: string[]; // Assuming this is a multi-choice question
+  physicalActivityLevel: 'Sedentary' | 'Lightly active' | 'Moderately active' | 'Very active' | 'Extra active'; // Assuming this is a single choice question
+  sleepPatterns: 'Consistent' | 'Inconsistent' | 'Insomnia' | 'Hypersomnia' | 'Other'; // Assuming this is a single choice question
+  tobaccoAlcoholDrugUse?: string[]; // Assuming this is a multi-choice question
+  healthInsuranceProvider: string; // Assuming this is a free text response
+  primaryCarePhysicianDetails: {
+    name: string;
+    email: string;
+    address: string;
+    provider: string;
+  };
+  emergencyContactInformation: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  healthGoals: string; // Assuming this is a free text response
+  // Include any additional fields as necessary
+  answers: Answer[]; // This could be used if you prefer to store all answers in a structured array
+}
+  
