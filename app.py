@@ -19,7 +19,16 @@ from openai import AsyncAzureOpenAI
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
-from azure.cosmos import CosmosClient
+from azure.cosmos import CosmosClient, exceptions
+USER_DETAILS_CONTAINER_NAME = 'UserDetails'
+url = 'your_cosmos_db_account_url'
+key = 'your_cosmos_db_account_key'
+client = CosmosClient(url, credential=key)
+container_name = 'UserDetails'
+database_name = 'UserDetails'
+database = client.get_database_client(database_name)
+container = database.get_container_client(container_name)
+user_details_container = database.get_container_client(USER_DETAILS_CONTAINER_NAME)
 
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
 
@@ -62,6 +71,51 @@ async def assets(path):
     return await send_from_directory("static/assets", path)
 
 load_dotenv()
+
+bp = Blueprint('user_details', __name__, url_prefix='/api/user')
+
+user_blueprint = Blueprint('user', __name__)
+user_blueprint = cors(user_blueprint, allow_origin="http://localhost:3000")  # Apply CORS to this blueprint if needed
+
+@user_blueprint.route('/user/details/<user_id>', methods=['GET'])
+async def get_user_details(user_id):
+    try:
+        # Query Cosmos DB for user details
+        query = "SELECT * FROM c WHERE c.userId = @userId"
+        items = list(container.query_items(
+            query=query,
+            parameters=[{"name": "@userId", "value": user_id}],
+            enable_cross_partition_query=True
+        ))
+        if items:
+            # Assuming only one item will match the given userId
+            return jsonify(items[0]), 200
+        else:
+            return jsonify({"error": "User not found"}), 404
+    except exceptions.CosmosHttpResponseError as e:
+        return jsonify({"error": str(e)}), 500
+@user_blueprint.route('/user/details/<user_id>', methods=['POST'])
+async def update_user_details(user_id):
+    data = await request.get_json()
+    try:
+        # Fetch the existing user document
+        user_details = list(container.query_items(
+            query="SELECT * FROM c WHERE c.userId = @userId",
+            parameters=[{"name": "@userId", "value": user_id}],
+            enable_cross_partition_query=True
+        ))[0]
+        
+        # Update the document with new data
+        for key, value in data.items():
+            if key in user_details:
+                user_details[key] = value
+        
+        # Upsert the updated document back into Cosmos DB
+        container.upsert_item(user_details)
+        return jsonify({"message": "User details updated successfully"}), 200
+    except exceptions.CosmosHttpResponseError as e:
+        return jsonify({"error": str(e)}), 500
+
 
 # Debug settings
 DEBUG = os.environ.get("DEBUG", "false")
@@ -402,29 +456,6 @@ def init_user_details_cosmosdb_client():
         raise e
 
     return user_details_client
-
-# Initialize CosmosDB Client for Goals
-def init_goals_cosmosdb_client():
-    goals_client = None
-    try:
-        cosmos_endpoint = f'https://{AZURE_COSMOSDB_ACCOUNT}.documents.azure.com:443/'
-
-        if not AZURE_COSMOSDB_ACCOUNT_KEY:
-            from azure.identity import DefaultAzureCredential
-            credential = DefaultAzureCredential()
-        else:
-            credential = AZURE_COSMOSDB_ACCOUNT_KEY
-
-        client = CosmosClient(cosmos_endpoint, credential=credential)
-        database = client.get_database_client(AZURE_COSMOSDB_GOALS_DATABASE)
-        container = database.get_container_client(AZURE_COSMOSDB_GOALS_CONTAINER)
-
-        goals_client = {"client": client, "database": database, "container": container}
-    except Exception as e:
-        logging.exception("Exception in Goals CosmosDB initialization", e)
-        raise e
-
-    return goals_client
 
 # Connect and Get Configured Data Sources
 def get_configured_data_source():
@@ -1425,6 +1456,24 @@ async def update_user_profile():
         logging.exception("Exception in /profile/update")
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/user/details', methods=['GET'])
+async def get_user_details():
+    user_id = request.args.get('userId')  # Or however you retrieve the current user's ID
+    user_details = await cosmos_conversation_client.read_item(user_id, partition_key=user_id)
+    return jsonify(user_details)
+
+@bp.route('/user/details/update', methods=['POST'])
+async def update_user_details():
+    user_id = request.json['userId']
+    answers = request.json['answers']
+    # Assume cosmos_conversation_client is already initialized and configured
+    await cosmos_conversation_client.upsert_item({
+        'userId': user_id,
+        'answers': answers
+    })
+    return jsonify({"message": "User answers updated successfully"})
+
+
 @bp.route('/goals', methods=['GET'])
 async def get_goals():
     # Fetch all goals from the goals_container
@@ -1465,5 +1514,69 @@ async def delete_goal(id):
     partition_key_value = id  # Adjust this based on your partition key setup
     AZURE_COSMOSDB_GOALS_CONTAINER.delete_item(item=id, partition_key=partition_key_value)
     return jsonify({'message': 'Goal deleted successfully'}), 204
+
+@user_blueprint.route('/user/details/<user_id>', methods=['GET'])
+async def get_or_create_user_details(user_id):
+    try:
+        # Attempt to find the user in the database
+        query = "SELECT * FROM c WHERE c.userId = @userId"
+        parameters = [{"name": "@userId", "value": user_id}]
+        items = list(container.query_items(query=query, parameters=parameters, enable_cross_partition_query=True))
+        
+        if items:
+            # User found, return details
+            return jsonify(items[0]), 200
+        else:
+            # User not found, create a new profile with default details
+            new_user_profile = {
+                "userId": user_id,
+                "answers": []  # Assuming default structure; customize as needed
+            }
+            container.upsert_item(new_user_profile)
+            return jsonify(new_user_profile), 201
+        pass
+    except CosmosHttpResponseError as cosmos_error:
+        # Handle Cosmos DB HTTP response errors specifically
+        return jsonify({"error": "Database error", "details": str(cosmos_error)}), 500
+    except Exception as e:
+        # Handle other unexpected errors
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
+    except exceptions.CosmosException as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+
+@user_blueprint.route('/user/details/<user_id>', methods=['POST'])
+async def upsert_user_details(user_id):
+    update_data = await request.get_json()
+    try:
+        # Attempt to fetch the existing user document
+        documents = list(container.query_items(
+            query="SELECT * FROM c WHERE c.userId = @userId",
+            parameters=[{"name": "@userId", "value": user_id}],
+            enable_cross_partition_query=True
+        ))
+
+        # Determine if a document for the user already exists
+        if documents:
+            user_doc = documents[0]
+            # Assuming 'answers' is part of the update data, merge it with existing data
+            if "answers" in update_data:
+                user_doc["answers"] = update_data["answers"]
+            # Include other fields from update_data as needed
+        else:
+            # If no document exists, create a new document using update_data
+            user_doc = {
+                "id": user_id,  # Set 'id' to user_id for Cosmos DB document ID
+                "userId": user_id,
+                **update_data  # Include the entire update_data in the new document
+            }
+
+        # Upsert the document in the Cosmos DB container
+        container.upsert_item(user_doc)
+        return jsonify({"message": "User details updated successfully"}), 200
+    except exceptions.CosmosException as e:
+        return jsonify({"error": str(e)}), 500
+
 
 app = create_app()
