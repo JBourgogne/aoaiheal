@@ -14,12 +14,13 @@ from quart import (
     send_from_directory,
     render_template,
 )
-
+from quart_cors import cors
 from openai import AsyncAzureOpenAI
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
 from azure.cosmos import CosmosClient, exceptions
+from azure.cosmos.exceptions import CosmosClientException, CosmosHttpResponseError
 USER_DETAILS_CONTAINER_NAME = 'UserDetails'
 url = 'your_cosmos_db_account_url'
 key = 'your_cosmos_db_account_key'
@@ -292,6 +293,7 @@ PROMPTFLOW_RESPONSE_FIELD_NAME = os.environ.get(
     "PROMPTFLOW_RESPONSE_FIELD_NAME", "reply"
 )
 # Frontend Settings via Environment Variables
+SANITIZE_ANSWER = os.environ.get("SANITIZE_ANSWER", "false").lower() == "true"
 AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "true").lower() == "true"
 CHAT_HISTORY_ENABLED = AZURE_COSMOSDB_ACCOUNT and AZURE_COSMOSDB_DATABASE and AZURE_COSMOSDB_CONVERSATIONS_CONTAINER
 frontend_settings = { 
@@ -864,6 +866,22 @@ async def send_chat_request(request):
         raise e
 
     return response
+
+async def promptflow_request(request_body: dict) -> dict:
+    # Example implementation, adjust according to your actual API call requirements
+    import httpx
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(PROMPTFLOW_ENDPOINT, json=request_body, headers={"Authorization": f"Bearer {PROMPTFLOW_API_KEY}"})
+        return response.json()
+
+def format_pf_non_streaming_response(response: dict, history_metadata: dict, response_field_name: str) -> dict:
+    # Example implementation, adjust according to your actual formatting requirements
+    formatted_response = {
+        "data": response.get(response_field_name, {}),
+        "metadata": history_metadata
+    }
+    return formatted_response
 
 
 async def complete_chat_request(request_body):
@@ -1462,7 +1480,7 @@ async def update_user_profile():
 @bp.route('/user/details', methods=['GET'])
 async def get_user_details():
     user_id = request.args.get('userId')  # Or however you retrieve the current user's ID
-    user_details = await cosmos_conversation_client.read_item(user_id, partition_key=user_id)
+    user_details = await CosmosConversationClient.read_item(user_id, partition_key=user_id)
     return jsonify(user_details)
 
 @bp.route('/user/details/update', methods=['POST'])
@@ -1470,7 +1488,7 @@ async def update_user_details():
     user_id = request.json['userId']
     answers = request.json['answers']
     # Assume cosmos_conversation_client is already initialized and configured
-    await cosmos_conversation_client.upsert_item({
+    await CosmosConversationClient.upsert_item({
         'userId': user_id,
         'answers': answers
     })
