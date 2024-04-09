@@ -3,7 +3,6 @@ import json
 import os
 import logging
 import uuid
-from dotenv import load_dotenv
 import httpx
 from quart import (
     Blueprint,
@@ -61,7 +60,7 @@ user_blueprint = cors(user_blueprint, allow_origin="http://localhost:3000")
 # Base route for the 'base' blueprint
 @bp.route("/")
 async def index():
-    return await render_template("index.html", title="UI_TITLE", favicon="UI_FAVICON")
+    return await send_from_directory(app.static_folder, "index.html")
 
 @bp.route("/favicon.ico")
 async def favicon():

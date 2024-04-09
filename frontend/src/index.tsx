@@ -5,7 +5,9 @@ import { initializeIcons } from "@fluentui/react";
 
 import "./index.css";
 
+// Import your Layout and other components
 import Layout from "./pages/layout/Layout";
+import HamburgerMenu from "./components/HamburgerMenu"; // Import HamburgerMenu
 import NoPage from "./pages/NoPage";
 import HomeScreen from "./pages/HomeScreen";
 import Chat from "./pages/chat/Chat";
@@ -18,6 +20,8 @@ function App() {
     return (
         <AppStateProvider>
             <BrowserRouter>
+                {/* Include HamburgerMenu here if it's global */}
+                <HamburgerMenu />
                 <Routes>
                     <Route path="/" element={<Layout />}>
                         <Route index element={<HomeScreen />} />
