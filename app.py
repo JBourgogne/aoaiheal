@@ -20,9 +20,18 @@ from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
 from azure.cosmos import CosmosClient, exceptions
+USER_DETAILS_CONTAINER_NAME = 'UserDetails'
+url = 'your_cosmos_db_account_url'
+key = 'your_cosmos_db_account_key'
+client = CosmosClient(url, credential=key)
+container_name = 'UserDetails'
+database_name = 'UserDetails'
+database = client.get_database_client(database_name)
+container = database.get_container_client(container_name)
+user_details_container = database.get_container_client(USER_DETAILS_CONTAINER_NAME)
 
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
-
+# Quart Blueprint to group routes, static files, and templates
 bp = Blueprint("routes", __name__, static_folder="static", template_folder="static")
 
 # Current minimum Azure OpenAI version supported
@@ -30,7 +39,7 @@ MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION = "2024-02-15-preview"
 
 load_dotenv()
 
-# UI configuration (optional)
+# UI configuration
 UI_TITLE = os.environ.get("UI_TITLE") or "HEALio"
 UI_LOGO = os.environ.get("UI_LOGO")
 UI_CHAT_LOGO = os.environ.get("UI_CHAT_LOGO")
@@ -61,24 +70,13 @@ async def favicon():
 async def assets(path):
     return await send_from_directory("static/assets", path)
 
+# Load environment variables
 load_dotenv()
 
 bp = Blueprint('user_details', __name__, url_prefix='/api/user')
 
 user_blueprint = Blueprint('user', __name__)
 user_blueprint = cors(user_blueprint, allow_origin="http://localhost:3000")  # Apply CORS to this blueprint if needed
-
-USER_DETAILS_CONTAINER_NAME = 'userdetails'
-
-# Cosmos DB endpoint and database name
-url = 'https://db-healio.documents.azure.com:443/'
-database_name = 'userDetails'
-# Create a CosmosClient using DefaultAzureCredential
-# DefaultAzureCredential automatically uses Managed Identity in supported environments
-credential = DefaultAzureCredential()
-client = CosmosClient(url, credential=credential)
-
-# Now you can use `client` to interact with Cosmos DB
 
 @user_blueprint.route('/user/details/<user_id>', methods=['GET'])
 async def get_user_details(user_id):
@@ -231,7 +229,7 @@ AZURE_COSMOSDB_ACCOUNT_KEY = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY")
 AZURE_COSMOSDB_ENABLE_FEEDBACK = os.environ.get("AZURE_COSMOSDB_ENABLE_FEEDBACK", "true").lower() == "true"
 AZURE_COSMOSDB_USER_DETAILS_CONTAINER = 'userdetails'
 AZURE_COSMOSDB_GOALS_CONTAINER = 'goals'
-AZURE_COSMOSDB_USER_DETAILS_DATABASE = 'userDetails'
+AZURE_COSMOSDB_USER_DETAILS_DATABASE = 'userdetails'
 AZURE_COSMOSDB_GOALS_DATABASE = 'goals'
 
 # Elasticsearch Integration Settings
@@ -310,11 +308,7 @@ frontend_settings = {
     "sanitize_answer": SANITIZE_ANSWER,
 }
 
-<<<<<<< HEAD
-
-=======
 # Check if data source is configured
->>>>>>> db1b560 (cDBandPages)
 def should_use_data():
     global DATASOURCE_TYPE
     if AZURE_SEARCH_SERVICE and AZURE_SEARCH_INDEX:
@@ -789,6 +783,7 @@ def get_configured_data_source():
 
     return data_source
 
+# Clean up the model args and log the request
 def prepare_model_args(request_body):
     request_messages = request_body.get("messages", [])
     messages = []
@@ -854,6 +849,7 @@ def prepare_model_args(request_body):
 
     return model_args
 
+# Chat Request Handler
 async def send_chat_request(request):
     filtered_messages = [message for message in request['messages'] if message['role'] != 'tool']
     request['messages'] = filtered_messages
@@ -1041,6 +1037,7 @@ async def update_conversation():
         logging.exception("Exception in /history/update")
         return jsonify({"error": str(e)}), 500
 
+# Update message feedback
 @bp.route("/history/message_feedback", methods=["POST"])
 async def update_message():
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
@@ -1208,6 +1205,7 @@ async def get_conversation():
     await cosmos_conversation_client.cosmosdb_client.close()
     return jsonify({"conversation_id": conversation_id, "messages": messages}), 200
 
+# Rename conversation
 @bp.route("/history/rename", methods=["POST"])
 async def rename_conversation():
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
@@ -1251,6 +1249,7 @@ async def rename_conversation():
     await cosmos_conversation_client.cosmosdb_client.close()
     return jsonify(updated_conversation), 200
 
+# Delete all conversations
 @bp.route("/history/delete_all", methods=["DELETE"])
 async def delete_all_conversations():
     ## get the user id from the request headers
@@ -1295,6 +1294,7 @@ async def delete_all_conversations():
         logging.exception("Exception in /history/delete_all")
         return jsonify({"error": str(e)}), 500
 
+# Clear messages in conversation
 @bp.route("/history/clear", methods=["POST"])
 async def clear_messages():
     ## get the user id from the request headers
@@ -1462,7 +1462,7 @@ async def update_user_profile():
 @bp.route('/user/details', methods=['GET'])
 async def get_user_details():
     user_id = request.args.get('userId')  # Or however you retrieve the current user's ID
-    user_details = await CosmosConversationClient.read_item(user_id, partition_key=user_id)
+    user_details = await cosmos_conversation_client.read_item(user_id, partition_key=user_id)
     return jsonify(user_details)
 
 @bp.route('/user/details/update', methods=['POST'])
@@ -1470,7 +1470,7 @@ async def update_user_details():
     user_id = request.json['userId']
     answers = request.json['answers']
     # Assume cosmos_conversation_client is already initialized and configured
-    await CosmosConversationClient.upsert_item({
+    await cosmos_conversation_client.upsert_item({
         'userId': user_id,
         'answers': answers
     })
