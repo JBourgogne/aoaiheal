@@ -21,8 +21,8 @@ from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
 from azure.cosmos import CosmosClient, exceptions
 USER_DETAILS_CONTAINER_NAME = 'UserDetails'
-url = 'your_cosmos_db_account_url'
-key = 'your_cosmos_db_account_key'
+url = 'https://db-healio.documents.azure.com:443/'
+key = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY")
 client = CosmosClient(url, credential=key)
 container_name = 'UserDetails'
 database_name = 'UserDetails'
