@@ -20,7 +20,7 @@ from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
 from azure.cosmos import CosmosClient, exceptions
-from azure.cosmos.exceptions import CosmosClientException, CosmosHttpResponseError
+from azure.cosmos.exceptions import CosmosHttpResponseError
 USER_DETAILS_CONTAINER_NAME = 'UserDetails'
 url = 'your_cosmos_db_account_url'
 key = 'your_cosmos_db_account_key'
