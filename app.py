@@ -21,15 +21,7 @@ from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
 from azure.cosmos import CosmosClient, exceptions
 from azure.cosmos.exceptions import CosmosHttpResponseError
-USER_DETAILS_CONTAINER_NAME = 'UserDetails'
-url = 'your_cosmos_db_account_url'
-key = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY", "").strip()
-client = CosmosClient(url, credential=key)
-container_name = 'userdetails'
-database_name = 'userdetails'
-database = client.get_database_client(database_name)
-container = database.get_container_client(container_name)
-user_details_container = database.get_container_client(USER_DETAILS_CONTAINER_NAME)
+
 
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
 # Quart Blueprint to group routes, static files, and templates
@@ -73,6 +65,18 @@ async def assets(path):
 
 # Load environment variables
 load_dotenv()
+
+USER_DETAILS_CONTAINER_NAME = 'UserDetails'
+url = os.environ.get("AZURE_COSMOSDB_ACCOUNT_URI")
+if not url:
+    raise Exception("Cosmos DB URL environment variable is not set.")
+key = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY", "").strip()
+client = CosmosClient(url, credential=key)
+container_name = 'userdetails'
+database_name = 'userdetails'
+database = client.get_database_client(database_name)
+container = database.get_container_client(container_name)
+user_details_container = database.get_container_client(USER_DETAILS_CONTAINER_NAME)
 
 bp = Blueprint('user_details', __name__, url_prefix='/api/user')
 
