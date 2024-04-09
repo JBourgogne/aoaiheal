@@ -89,46 +89,6 @@ def create_app():
     
     return app
 
-@user_blueprint.route('/user/details/<user_id>', methods=['GET'])
-async def get_user_details(user_id):
-    try:
-        # Query Cosmos DB for user details
-        query = "SELECT * FROM c WHERE c.userId = @userId"
-        items = list(container.query_items(
-            query=query,
-            parameters=[{"name": "@userId", "value": user_id}],
-            enable_cross_partition_query=True
-        ))
-        if items:
-            # Assuming only one item will match the given userId
-            return jsonify(items[0]), 200
-        else:
-            return jsonify({"error": "User not found"}), 404
-    except exceptions.CosmosHttpResponseError as e:
-        return jsonify({"error": str(e)}), 500
-@user_blueprint.route('/user/details/<user_id>', methods=['POST'])
-async def update_user_details(user_id):
-    data = await request.get_json()
-    try:
-        # Fetch the existing user document
-        user_details = list(container.query_items(
-            query="SELECT * FROM c WHERE c.userId = @userId",
-            parameters=[{"name": "@userId", "value": user_id}],
-            enable_cross_partition_query=True
-        ))[0]
-        
-        # Update the document with new data
-        for key, value in data.items():
-            if key in user_details:
-                user_details[key] = value
-        
-        # Upsert the updated document back into Cosmos DB
-        container.upsert_item(user_details)
-        return jsonify({"message": "User details updated successfully"}), 200
-    except exceptions.CosmosHttpResponseError as e:
-        return jsonify({"error": str(e)}), 500
-
-
 # Debug settings
 DEBUG = os.environ.get("DEBUG", "false")
 if DEBUG.lower() == "true":
@@ -953,6 +913,45 @@ def get_frontend_settings():
         return jsonify(frontend_settings), 200
     except Exception as e:
         logging.exception("Exception in /frontend_settings")
+        return jsonify({"error": str(e)}), 500
+
+@user_blueprint.route('/user/details/<user_id>', methods=['GET'])
+async def get_user_details(user_id):
+    try:
+        # Query Cosmos DB for user details
+        query = "SELECT * FROM c WHERE c.userId = @userId"
+        items = list(container.query_items(
+            query=query,
+            parameters=[{"name": "@userId", "value": user_id}],
+            enable_cross_partition_query=True
+        ))
+        if items:
+            # Assuming only one item will match the given userId
+            return jsonify(items[0]), 200
+        else:
+            return jsonify({"error": "User not found"}), 404
+    except exceptions.CosmosHttpResponseError as e:
+        return jsonify({"error": str(e)}), 500
+@user_blueprint.route('/user/details/<user_id>', methods=['POST'])
+async def update_user_details(user_id):
+    data = await request.get_json()
+    try:
+        # Fetch the existing user document
+        user_details = list(container.query_items(
+            query="SELECT * FROM c WHERE c.userId = @userId",
+            parameters=[{"name": "@userId", "value": user_id}],
+            enable_cross_partition_query=True
+        ))[0]
+        
+        # Update the document with new data
+        for key, value in data.items():
+            if key in user_details:
+                user_details[key] = value
+        
+        # Upsert the updated document back into Cosmos DB
+        container.upsert_item(user_details)
+        return jsonify({"message": "User details updated successfully"}), 200
+    except exceptions.CosmosHttpResponseError as e:
         return jsonify({"error": str(e)}), 500
 
 
