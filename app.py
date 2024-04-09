@@ -23,10 +23,10 @@ from azure.cosmos import CosmosClient, exceptions
 from azure.cosmos.exceptions import CosmosHttpResponseError
 USER_DETAILS_CONTAINER_NAME = 'UserDetails'
 url = 'your_cosmos_db_account_url'
-key = 'your_cosmos_db_account_key'
+key = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY", "").strip()
 client = CosmosClient(url, credential=key)
-container_name = 'UserDetails'
-database_name = 'UserDetails'
+container_name = 'userdetails'
+database_name = 'userdetails'
 database = client.get_database_client(database_name)
 container = database.get_container_client(container_name)
 user_details_container = database.get_container_client(USER_DETAILS_CONTAINER_NAME)
