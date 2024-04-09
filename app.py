@@ -19,18 +19,11 @@ from openai import AsyncAzureOpenAI
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
-from azure.cosmos import CosmosClient, exceptions
-from azure.cosmos.exceptions import CosmosHttpResponseError
-
 
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
-# Quart Blueprint to group routes, static files, and templates
-bp = Blueprint("routes", __name__, static_folder="static", template_folder="static")
 
 # Current minimum Azure OpenAI version supported
 MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION = "2024-02-15-preview"
-
-load_dotenv()
 
 # UI configuration
 UI_TITLE = os.environ.get("UI_TITLE") or "HEALio"
@@ -41,36 +34,13 @@ UI_CHAT_DESCRIPTION = os.environ.get("UI_CHAT_DESCRIPTION") or "This chatbot is 
 UI_FAVICON = os.environ.get("UI_FAVICON") or "/favicon.ico"
 UI_SHOW_SHARE_BUTTON = os.environ.get("UI_SHOW_SHARE_BUTTON", "true").lower() == "true"
 
-# Create App
-def create_app():
-    app = Quart(__name__)
-    app.register_blueprint(bp)
-    app.config["TEMPLATES_AUTO_RELOAD"] = True
-    return app
-
-# Base Route
-@bp.route("/")
-async def index():
-    return await render_template("index.html", title=UI_TITLE, favicon=UI_FAVICON)
-
-
-@bp.route("/favicon.ico")
-async def favicon():
-    return await bp.send_static_file("favicon.ico")
-
-
-@bp.route("/assets/<path:path>")
-async def assets(path):
-    return await send_from_directory("static/assets", path)
-
-# Load environment variables
-load_dotenv()
-
 USER_DETAILS_CONTAINER_NAME = 'UserDetails'
 url = os.environ.get("AZURE_COSMOSDB_ACCOUNT_URI")
 if not url:
     raise Exception("Cosmos DB URL environment variable is not set.")
 key = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY", "").strip()
+from azure.cosmos import CosmosClient, exceptions
+from azure.cosmos.exceptions import CosmosHttpResponseError
 client = CosmosClient(url, credential=key)
 container_name = 'userdetails'
 database_name = 'userdetails'
@@ -78,10 +48,46 @@ database = client.get_database_client(database_name)
 container = database.get_container_client(container_name)
 user_details_container = database.get_container_client(USER_DETAILS_CONTAINER_NAME)
 
-bp = Blueprint('user_details', __name__, url_prefix='/api/user')
+# Quart Blueprint to group routes, static files, and templates
+bp = Blueprint("routes", __name__, static_folder="static", template_folder="static")
 
-user_blueprint = Blueprint('user', __name__)
-user_blueprint = cors(user_blueprint, allow_origin="http://localhost:3000")  # Apply CORS to this blueprint if needed
+# Define your blueprints
+bp = Blueprint('base', __name__)
+user_blueprint = Blueprint('user', __name__, url_prefix='/api/user')
+
+# Apply CORS to the user_blueprint
+user_blueprint = cors(user_blueprint, allow_origin="http://localhost:3000")
+
+# Base route for the 'base' blueprint
+@bp.route("/")
+async def index():
+    return await render_template("index.html", title="UI_TITLE", favicon="UI_FAVICON")
+
+@bp.route("/favicon.ico")
+async def favicon():
+    return await send_from_directory("static", "favicon.ico")
+
+@bp.route("/assets/<path:path>")
+async def assets(path):
+    return await send_from_directory("static/assets", path)
+
+# Example route for the 'user' blueprint
+@user_blueprint.route("/details")
+async def user_details():
+    # Your user details logic here
+    return {"message": "User details endpoint"}
+
+# Create app function
+def create_app():
+    app = Quart(__name__)
+
+    # Register blueprints with the app
+    app.register_blueprint(bp)
+    app.register_blueprint(user_blueprint)
+
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    
+    return app
 
 @user_blueprint.route('/user/details/<user_id>', methods=['GET'])
 async def get_user_details(user_id):
