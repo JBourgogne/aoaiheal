@@ -20,15 +20,6 @@ from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
 from azure.cosmos import CosmosClient, exceptions
-USER_DETAILS_CONTAINER_NAME = 'UserDetails'
-url = 'https://db-healio.documents.azure.com:443/'
-key = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY")
-client = CosmosClient(url, credential=key)
-container_name = 'UserDetails'
-database_name = 'UserDetails'
-database = client.get_database_client(database_name)
-container = database.get_container_client(container_name)
-user_details_container = database.get_container_client(USER_DETAILS_CONTAINER_NAME)
 
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
 
@@ -76,6 +67,18 @@ bp = Blueprint('user_details', __name__, url_prefix='/api/user')
 
 user_blueprint = Blueprint('user', __name__)
 user_blueprint = cors(user_blueprint, allow_origin="http://localhost:3000")  # Apply CORS to this blueprint if needed
+
+USER_DETAILS_CONTAINER_NAME = 'userdetails'
+
+# Cosmos DB endpoint and database name
+url = 'https://db-healio.documents.azure.com:443/'
+database_name = 'userDetails'
+# Create a CosmosClient using DefaultAzureCredential
+# DefaultAzureCredential automatically uses Managed Identity in supported environments
+credential = DefaultAzureCredential()
+client = CosmosClient(url, credential=credential)
+
+# Now you can use `client` to interact with Cosmos DB
 
 @user_blueprint.route('/user/details/<user_id>', methods=['GET'])
 async def get_user_details(user_id):
@@ -228,7 +231,7 @@ AZURE_COSMOSDB_ACCOUNT_KEY = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY")
 AZURE_COSMOSDB_ENABLE_FEEDBACK = os.environ.get("AZURE_COSMOSDB_ENABLE_FEEDBACK", "true").lower() == "true"
 AZURE_COSMOSDB_USER_DETAILS_CONTAINER = 'userdetails'
 AZURE_COSMOSDB_GOALS_CONTAINER = 'goals'
-AZURE_COSMOSDB_USER_DETAILS_DATABASE = 'userdetails'
+AZURE_COSMOSDB_USER_DETAILS_DATABASE = 'userDetails'
 AZURE_COSMOSDB_GOALS_DATABASE = 'goals'
 
 # Elasticsearch Integration Settings
@@ -1459,7 +1462,7 @@ async def update_user_profile():
 @bp.route('/user/details', methods=['GET'])
 async def get_user_details():
     user_id = request.args.get('userId')  # Or however you retrieve the current user's ID
-    user_details = await cosmos_conversation_client.read_item(user_id, partition_key=user_id)
+    user_details = await CosmosConversationClient.read_item(user_id, partition_key=user_id)
     return jsonify(user_details)
 
 @bp.route('/user/details/update', methods=['POST'])
@@ -1467,7 +1470,7 @@ async def update_user_details():
     user_id = request.json['userId']
     answers = request.json['answers']
     # Assume cosmos_conversation_client is already initialized and configured
-    await cosmos_conversation_client.upsert_item({
+    await CosmosConversationClient.upsert_item({
         'userId': user_id,
         'answers': answers
     })
