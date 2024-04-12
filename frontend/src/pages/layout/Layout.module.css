@@ -1,25 +1,46 @@
 .layout {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 100vh;
 }
 
 .header {
+    padding: 10px 20px;
     background-color: #f2f2f2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.headerContainer {
-    display: flex;
-    justify-content: left;
-    align-items: center;
-}
-
-.headerTitleContainer {
+.logoLink {
     display: flex;
     align-items: center;
-    margin-left: 14px;
     text-decoration: none;
+    color: #333;
 }
+
+.logo {
+    height: 50px;
+    margin-right: 10px;
+}
+
+.footer {
+    padding: 20px 0;
+    background-color: #e2e2e2;
+    text-align: center;
+}
+
+.footerLink {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #333;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.menuButton {
+    margin-right: auto; /* Pushes the button to the left */
+}
+
 
 .headerTitle {
     font-style: normal;
@@ -27,49 +48,19 @@
     font-size: 20px;
     line-height: 28px;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     color: #242424;
 }
 
-.headerIcon {
-    height: 32px;
-    width: auto;
-    margin-left: 36px;
+.footerIcon {
+    display: block;
+    margin: 0 auto 4px; /* Center icon and add space below */
+    font-size: 24px; /* Adjust icon size */
 }
 
-.shareButtonContainer {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    margin-right: 20px;
-}
-
-.shareButton {
-    color: #FFFFFF;
-}
-
-.shareButtonText {
-    font-style: normal;
-    font-weight: 600;
-    font-size: 14px;
-    line-height: 20px;
-    display: flex;
-    align-items: center;
-    color: #FFFFFF;
-}
-
-.urlTextBox {
-    font-style: normal;
-    font-weight: 400;
-    font-size: 14px;
-    line-height: 20px;
-    color: #707070;
-    border: 1px solid #D1D1D1;
-    border-radius: 4px;
-}
-
+/* Styles for share and copy functionalities, if they are globally relevant */
+.shareButtonContainer,
 .copyButtonContainer {
-    box-sizing: border-box;
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -79,57 +70,40 @@
     background: #FFFFFF;
     border: 1px solid #D1D1D1;
     border-radius: 4px;
+    cursor: pointer;
 }
 
+.shareButtonContainer:hover,
 .copyButtonContainer:hover {
-    cursor: pointer;
     background: #D1D1D1;
 }
 
+.shareButton,
 .copyButton {
     color: #424242;
 }
 
+.shareButtonText,
 .copyButtonText {
     font-style: normal;
     font-weight: 600;
     font-size: 14px;
     line-height: 20px;
-    display: flex;
-    align-items: center;
     color: #242424;
 }
 
-.footer {
-    display: flex;
-    justify-content: center;
-    gap: 20px; /* Adjust space between footer items */
-}
-
-.footerItem {
-    text-align: center;
-}
-
-.footerLink {
-    display: block;
-    color: inherit; /* Adjust as needed */
-    text-decoration: none;
-}
-
-.footerIcon {
-    display: block;
-    margin: 0 auto 4px; /* Center icon and add space below */
-    font-size: 24px; /* Adjust icon size */
-}
-
-
-
 @media (max-width: 480px) {
-    .headerTitleContainer {
-        margin-left: 4px;
+    .header {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .headerTitleContainer,
+    .headerIcon {
+        margin-left: 4px; /* Tightens up spacing on mobile */
     }
 
     .headerIcon {
-        margin-left: 26px;
+        margin-bottom: 5px; /* Adds spacing for stacked layout */
     }
 }

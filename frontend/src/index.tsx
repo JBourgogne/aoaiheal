@@ -1,13 +1,12 @@
+// App.tsx or index.tsx
+import './theme.ts'; // This will apply the theme globally
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { initializeIcons } from "@fluentui/react";
-
 import "./index.css";
-
-// Import your Layout and other components
 import Layout from "./pages/layout/Layout";
-import HamburgerMenu from "./components/HamburgerMenu"; // Import HamburgerMenu
+import HamburgerMenu from "./components/HamburgerMenu";
 import NoPage from "./pages/NoPage";
 import HomeScreen from "./pages/HomeScreen";
 import Chat from "./pages/chat/Chat";
