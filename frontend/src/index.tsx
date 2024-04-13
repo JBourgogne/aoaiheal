@@ -14,6 +14,7 @@ import { AppStateProvider } from "./state/AppProvider";
 import ProfileScreen from "./pages/ProfileScreen";
 import ItemsList from "./pages/ItemsList";
 
+
 function App() {
     initializeIcons(); // Ensure this is called once in your app entry file
     return (

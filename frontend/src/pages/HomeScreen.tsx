@@ -16,6 +16,7 @@ const HomeScreen: React.FC = () => {
     <div>
       <section>
         <h2>Profile</h2>
+        <Link to="/profile">Go to Chat</Link>
         {/* Profile component or details go here */}
       </section>
       <section>
@@ -31,7 +32,7 @@ const HomeScreen: React.FC = () => {
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         style={{ width: '100%', height: '200px', border: '2px dashed #ccc', marginTop: '20px' }}>
-        <h2>Drag and Drop Widgets Here</h2>
+        <h2>Drag and Drop Goals and Tasks Here</h2>
         {/* This area is for dropping widgets. Add your logic */}
       </section>
     </div>

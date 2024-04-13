@@ -177,4 +177,12 @@ export interface UserDetails {
   answers: Answer[]; // Optional: If you prefer to store all answers in a structured array
 }
 
+interface Tile {
+    id: string; // Unique identifier for the tile
+    title: string;
+    icon: string; // URL or icon name
+    blurb: string;
+    type: 'checkbox' | 'percentage' | 'fractional'; // Type of tile
+  }
+  
   
