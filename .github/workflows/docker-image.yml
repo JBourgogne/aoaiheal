@@ -42,10 +42,6 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Install Azure Developer CLI
+    - name: Deploy to Azure App Service
       run: |
-        az extension add --name azure-devops --upgrade
-
-    - name: Deploy to Azure using Azure Developer CLI
-      run: |
-        azd up --project ./azure.yaml
+        az webapp up --runtime PYTHON:3.11 --sku B1 --name healio --resource-group heal
