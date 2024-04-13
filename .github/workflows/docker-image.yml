@@ -44,7 +44,7 @@ jobs:
 
     - name: Install Azure Developer CLI
       run: |
-        az extension add --name azure-dev --upgrade
+        az extension add --name azure-devops --upgrade
 
     - name: Deploy to Azure using Azure Developer CLI
       run: |
