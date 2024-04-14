@@ -21,6 +21,7 @@ export interface AppState {
     feedbackState: { [answerId: string]: Feedback.Neutral | Feedback.Positive | Feedback.Negative; };
     userId: string | null;
     tiles: Tile[];
+    dispatch: () => null ;
 }
 
 export type Action =
@@ -57,13 +58,21 @@ const initialState: AppState = {
     frontendSettings: null,
     feedbackState: {},
     userId: null,
-    tiles: []
+    tiles: [],
+    dispatch: function (): null {
+        throw new Error('Function not implemented.');
+    }
 };
 
+// Provide default values for the context
 export const AppStateContext = createContext<{
     state: AppState;
     dispatch: React.Dispatch<Action>;
-} | undefined>(undefined);
+}>({
+    state: initialState,  // You need to define a sensible initial state
+    dispatch: () => null  // A no-op function for dispatch
+});
+
 
 type AppStateProviderProps = {
     children: ReactNode;

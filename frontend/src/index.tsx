@@ -1,5 +1,5 @@
 // App.tsx or index.tsx
-import './theme.ts'; // This will apply the theme globally
+import './theme'; // This will apply the theme globally
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -13,15 +13,19 @@ import Chat from "./pages/chat/Chat";
 import { AppStateProvider } from "./state/AppProvider";
 import ProfileScreen from "./pages/ProfileScreen";
 import ItemsList from "./pages/ItemsList";
-
+import { MsalProvider } from "@azure/msal-react";
+import msalInstance from './msalConfig';
+import UserDetailsComponent from './components/UserDetailsComponent';
 
 function App() {
     initializeIcons(); // Ensure this is called once in your app entry file
     return (
+    <MsalProvider instance={msalInstance}>
         <AppStateProvider>
             <BrowserRouter>
                 {/* Include HamburgerMenu here if it's global */}
                 <HamburgerMenu />
+                <UserDetailsComponent />
                 <Routes>
                     <Route path="/" element={<Layout />}>
                         <Route index element={<HomeScreen />} />
@@ -33,6 +37,7 @@ function App() {
                 </Routes>
             </BrowserRouter>
         </AppStateProvider>
+        </MsalProvider>
     );
 }
 
