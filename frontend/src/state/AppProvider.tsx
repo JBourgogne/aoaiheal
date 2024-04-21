@@ -19,6 +19,8 @@ export interface AppState {
     currentChat: Conversation | null;
     frontendSettings: FrontendSettings | null;
     feedbackState: { [answerId: string]: Feedback.Neutral | Feedback.Positive | Feedback.Negative; };
+    oid: string | null;
+    sub: string | null;
     userId: string | null;
     tiles: Tile[];
     dispatch: () => null ;
@@ -45,24 +47,24 @@ export type Action =
     | { type: 'REMOVE_TILE', payload: string }
     | { type: 'SET_USER_ID', payload: string | null };
 
-const initialState: AppState = {
-    isChatHistoryOpen: false,
-    chatHistoryLoadingState: ChatHistoryLoadingState.Loading,
-    chatHistory: null,
-    filteredChatHistory: null,
-    currentChat: null,
-    isCosmosDBAvailable: {
-        cosmosDB: false,
-        status: CosmosDBStatus.NotConfigured,
-    },
-    frontendSettings: null,
-    feedbackState: {},
-    userId: null,
-    tiles: [],
-    dispatch: function (): null {
-        throw new Error('Function not implemented.');
-    }
-};
+    const initialState: AppState = {
+        isChatHistoryOpen: false,
+        chatHistoryLoadingState: ChatHistoryLoadingState.Loading, // Consider more descriptive statuses
+        chatHistory: [], // Empty array if no chats are loaded yet
+        filteredChatHistory: [],
+        currentChat: null,
+        isCosmosDBAvailable: {
+            cosmosDB: true,
+            status: CosmosDBStatus.Working,
+        },
+        frontendSettings: {}, // Default to empty object or specific default settings
+        feedbackState: {},
+        oid: null,
+        sub: null,
+        userId: null, // null is acceptable if no user is logged in
+        tiles: [], // Empty array if no tiles are configured
+        dispatch: () => null,
+    };
 
 // Provide default values for the context
 export const AppStateContext = createContext<{

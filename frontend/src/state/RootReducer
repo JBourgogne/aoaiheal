@@ -1,0 +1,10 @@
+import { combineReducers } from 'redux'; // If using Redux, or manually implement a similar logic
+import { appStateReducer } from './AppReducer';
+import { userGoalsReducer } from './UserGoalsReducer';
+
+const rootReducer = combineReducers({
+    chat: appStateReducer,
+    userGoals: userGoalsReducer
+});
+
+export default rootReducer;

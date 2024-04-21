@@ -1,6 +1,5 @@
 import { Conversation, Feedback, fetchChatHistoryInit, historyList } from '../api';
 import { Action, AppState } from './AppProvider';
-import { Answer, UserDetails } from '../api/models'; // Assuming these are the types
 
 // Define the reducer function
 export const appStateReducer = (state: AppState, action: Action): AppState => {
@@ -75,19 +74,6 @@ export const appStateReducer = (state: AppState, action: Action): AppState => {
                     [action.payload.answerId]: action.payload.feedback,
                 },
             };
-        // Tile management actions
-        case 'SET_TILES':
-            return { ...state, tiles: action.payload };
-        case 'ADD_TILE':
-            return { ...state, tiles: [...state.tiles, action.payload] };
-        case 'UPDATE_TILE':
-            let updatedTiles = state.tiles.map(tile =>
-                tile.id === action.payload.id ? { ...tile, ...action.payload } : tile
-            );
-            return { ...state, tiles: updatedTiles };
-        case 'REMOVE_TILE':
-            let newTiles = state.tiles.filter(tile => tile.id !== action.payload);
-            return { ...state, tiles: newTiles };
         default:
             return state;
     }

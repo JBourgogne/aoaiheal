@@ -30,7 +30,7 @@ const HamburgerMenu = () => {
           <Link to="/" onClick={toggleMenu}>Home</Link>
           <Link to="/profile" onClick={toggleMenu}>Profile</Link>
           <Link to="/chat" onClick={toggleMenu}>Chat</Link>
-          <Link to="/items" onClick={toggleMenu}>Items</Link>
+          <Link to="/user/goals" onClick={toggleMenu}>Goals</Link>
           {/* Add more links as needed */}
         </nav>
       )}

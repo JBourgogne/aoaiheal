@@ -18,9 +18,11 @@ from openai import AsyncAzureOpenAI
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
-
+from flask import request, jsonify
+from werkzeug.exceptions import Unauthorized
 from backend.utils import format_as_ndjson, format_stream_response, generateFilterString, parse_multi_columns, format_non_streaming_response
-
+import jwt
+from jwt.exceptions import InvalidTokenError
 # Current minimum Azure OpenAI version supported
 MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION = "2024-02-15-preview"
 
@@ -89,7 +91,7 @@ def create_app():
     return app
 
 # Debug settings
-DEBUG = os.environ.get("DEBUG", "false")
+DEBUG = os.environ.get("DEBUG", "true")
 if DEBUG.lower() == "true":
     logging.basicConfig(level=logging.DEBUG)
 
@@ -198,9 +200,8 @@ AZURE_COSMOSDB_CONVERSATIONS_CONTAINER = os.environ.get(
 AZURE_COSMOSDB_ACCOUNT_KEY = os.environ.get("AZURE_COSMOSDB_ACCOUNT_KEY")
 AZURE_COSMOSDB_ENABLE_FEEDBACK = os.environ.get("AZURE_COSMOSDB_ENABLE_FEEDBACK", "true").lower() == "true"
 AZURE_COSMOSDB_USER_DETAILS_CONTAINER = 'userdetails'
-AZURE_COSMOSDB_GOALS_CONTAINER = 'goals'
 AZURE_COSMOSDB_USER_DETAILS_DATABASE = 'userdetails'
-AZURE_COSMOSDB_GOALS_DATABASE = 'goals'
+
 
 # Elasticsearch Integration Settings
 ELASTICSEARCH_ENDPOINT = os.environ.get("ELASTICSEARCH_ENDPOINT")
@@ -853,6 +854,20 @@ def format_pf_non_streaming_response(response: dict, history_metadata: dict, res
     return formatted_response
 
 
+def get_jwt_from_header():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        raise Unauthorized('Authorization token missing or invalid')
+    return auth_header.split(' ')[1]
+
+def decode_jwt(token):
+    try:
+        # Replace 'your_secret_key' with your actual secret key
+        # Ensure to fetch your public key from Azure if using RS256 keys
+        return jwt.decode(token, 'your_secret_key', algorithms=['HS256'])
+    except InvalidTokenError:
+        raise Unauthorized('Invalid token')
+    
 async def complete_chat_request(request_body):
     if USE_PROMPTFLOW and PROMPTFLOW_ENDPOINT and PROMPTFLOW_API_KEY:
         response = await promptflow_request(request_body)
@@ -1503,46 +1518,66 @@ async def update_user_details():
     return jsonify({"message": "User answers updated successfully"})
 
 
-@bp.route('/goals', methods=['GET'])
+@bp.route('/user/goals', methods=['GET'])
 async def get_goals():
-    # Fetch all goals from the goals_container
-    goals = list(AZURE_COSMOSDB_GOALS_CONTAINER.query_items(
-        query="SELECT * FROM c",
-        enable_cross_partition_query=True
-    ))
-    return jsonify(goals), 200
+    try:
+        user_id = request.args.get('user_id')
+        query = "SELECT * FROM c WHERE c.userId = @userId"
+        parameters = [{"name": "@userId", "value": user_id}]
+        goals = list(AZURE_COSMOSDB_USER_DETAILS_CONTAINER.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True
+        ))
+        return jsonify(goals), 200
+    except Exception as e:
+        # Make sure to return response in the context of an active request
+        return jsonify({"error": "Failed to fetch goals", "details": str(e)}), 500
 
-@bp.route('/goal', methods=['POST'])
+
+
+@bp.route('/user/goals', methods=['POST'])
 async def create_goal():
+    user_id = request.args.get('user_id')  # Assuming user_id is passed as a query parameter
     data = await request.get_json()
-    response = AZURE_COSMOSDB_GOALS_CONTAINER.create_item(body=data)
-    return jsonify(response), 201
+    data['userId'] = user_id  # Make sure to associate the goal with a user
+    try:
+        response = AZURE_COSMOSDB_USER_DETAILS_CONTAINER.create_item(body=data)
+        return jsonify(response), 201
+    except Exception as e:
+        return jsonify({"error": "Failed to create goal", "details": str(e)}), 500
 
-@bp.route('/goal/<id>', methods=['PUT'])
+@bp.route('/user/goals/<id>', methods=['PUT'])
 async def update_goal(id):
+    user_id = request.args.get('user_id')  # Assuming user_id is passed as a query parameter
     data = await request.get_json()
-    # Fetch the existing goal to get the partition key value if needed
-    existing_goals = list(AZURE_COSMOSDB_GOALS_CONTAINER.query_items(
-        query="SELECT * FROM c WHERE c.id = @id",
-        parameters=[{"name": "@id", "value": id}],
-        enable_cross_partition_query=True
-    ))
-    if not existing_goals:
-        return jsonify({"error": "Goal not found."}), 404
+    try:
+        existing_goal = list(AZURE_COSMOSDB_USER_DETAILS_CONTAINER.query_items(
+            query="SELECT * FROM c WHERE c.id = @id AND c.userId = @userId",
+            parameters=[{"name": "@id", "value": id}, {"name": "@userId", "value": user_id}],
+            enable_cross_partition_query=True
+        ))
+        if not existing_goal:
+            return jsonify({"error": "Goal not found."}), 404
 
-    # Assuming 'id' is used as the goal id within CosmosDB
-    goal_response = AZURE_COSMOSDB_GOALS_CONTAINER.upsert_item({
-        'id': id,
-        **data
-    })
-    return jsonify(goal_response), 200
+        goal_response = AZURE_COSMOSDB_USER_DETAILS_CONTAINER.upsert_item({
+            'id': id,
+            'userId': user_id,
+            **data
+        })
+        return jsonify(goal_response), 200
+    except Exception as e:
+        return jsonify({"error": "Failed to update goal", "details": str(e)}), 500
 
-@bp.route('/goal/<id>', methods=['DELETE'])
+@bp.route('/user/goals/<id>', methods=['DELETE'])
 async def delete_goal(id):
-    # Note: This requires knowing the partition key value, adjusting accordingly
-    partition_key_value = id  # Adjust this based on your partition key setup
-    AZURE_COSMOSDB_GOALS_CONTAINER.delete_item(item=id, partition_key=partition_key_value)
-    return jsonify({'message': 'Goal deleted successfully'}), 204
+    user_id = request.args.get('user_id')  # Assuming user_id is passed as a query parameter
+    try:
+        partition_key_value = user_id  # Use user_id as the partition key if set up that way
+        AZURE_COSMOSDB_USER_DETAILS_CONTAINER.delete_item(item=id, partition_key=partition_key_value)
+        return jsonify({'message': 'Goal deleted successfully'}), 204
+    except Exception as e:
+        return jsonify({"error": "Failed to delete goal", "details": str(e)}), 500
 
 @user_blueprint.route('/user/details/<user_id>', methods=['GET'])
 async def get_or_create_user_details(user_id):

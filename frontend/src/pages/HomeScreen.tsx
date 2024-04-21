@@ -1,42 +1,54 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-// Using TypeScript, define props and state interfaces
-// interface HomeScreenState { ... }
-// interface HomeScreenProps { ... }
+import React, { useState, useEffect } from 'react';
+import AddGoalModal from '../components/AddGoalModal';
+import axios from 'axios';
+
+interface Goal {
+    id: string;
+    description: string;
+    completed: boolean;
+}
 
 const HomeScreen: React.FC = () => {
-  // Placeholder function for drag and drop logic
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    // Handle the drop logic here
-    console.log('Widget dropped');
-  };
+    const [goals, setGoals] = useState<Goal[]>([]); // Specify that goals is an array of 'Goal'
+    const [modalIsOpen, setModalIsOpen] = useState<boolean>(false);
 
-  return (
-    <div>
-      <section>
-        <h2>Profile</h2>
-        <Link to="/profile">Go to Chat</Link>
-        {/* Profile component or details go here */}
-      </section>
-      <section>
-        <h2>Profile Details</h2>
-        {/* More detailed information or a link to it */}
-      </section>
-      <section>
-        <h2>Chat</h2>
-        <Link to="/chat">Go to Chat</Link>
-        {/* Assuming you have a route set up for '/chat' */}
-      </section>
-      <section
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        style={{ width: '100%', height: '200px', border: '2px dashed #ccc', marginTop: '20px' }}>
-        <h2>Drag and Drop Goals and Tasks Here</h2>
-        {/* This area is for dropping widgets. Add your logic */}
-      </section>
-    </div>
-  );
+    useEffect(() => {
+        fetchGoals();
+    }, []);
+
+    const fetchGoals = async () => {
+        const response = await axios.get<Goal[]>('/user/goals'); // Assume that the endpoint returns an array of Goal
+        setGoals(response.data);
+    };
+
+    const openModal = () => {
+        setModalIsOpen(true);
+    };
+
+    const closeModal = () => {
+        setModalIsOpen(false);
+    };
+
+    const handleAddGoal = (newGoal: Goal) => { // Specify that newGoal is of type 'Goal'
+        setGoals(prevGoals => [...prevGoals, newGoal]); // Use a functional update for better predictability
+        closeModal();
+    };
+
+    return (
+        <div>
+            <button onClick={openModal}>Add New Goal</button>
+            <AddGoalModal
+                isOpen={modalIsOpen}
+                onClose={closeModal}
+                onGoalAdded={handleAddGoal}
+            />
+            {goals.map(goal => (
+                <div key={goal.id}>
+                    {goal.description} - {goal.completed ? 'Completed' : 'Incomplete'}
+                </div>
+            ))}
+        </div>
+    );
 };
 
 export default HomeScreen;

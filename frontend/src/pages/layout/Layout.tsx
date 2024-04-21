@@ -16,7 +16,7 @@ interface UI {
 const Layout = () => {
   const { state } = useContext(AppStateContext) ?? {};
   const ui: UI = state?.frontendSettings?.ui ?? {};
-
+  const show_feedback_button = true;
   const [isFeedbackPanelOpen, setIsFeedbackPanelOpen] = useState(false);
 
   const toggleFeedbackPanel = () => setIsFeedbackPanelOpen(!isFeedbackPanelOpen);
@@ -26,7 +26,7 @@ const Layout = () => {
       <header className={styles.header}>
         <Stack horizontal tokens={{ childrenGap: 20 }} verticalAlign="center" horizontalAlign="space-between">
           <Link to="/" className={styles.logoLink}>
-            <img src={ui.logo || "/default-logo.png"} alt="Logo" className={styles.logo} />
+            <img src={ui.logo || "/images/logo.png"} alt="Logo" className={styles.logo} />
             <h1>{ui.title}</h1>
           </Link>
           <Stack horizontal tokens={{ childrenGap: 10 }}>
@@ -42,7 +42,7 @@ const Layout = () => {
         <Stack horizontal tokens={{ childrenGap: 50 }} verticalAlign="center" horizontalAlign="center">
           <Link to="/chat" className={styles.footerLink}><MdChat size={24} /> Chat</Link>
           <Link to="/profile" className={styles.footerLink}><MdPerson size={24} /> Profile</Link>
-          <Link to="/items" className={styles.footerLink}><MdList size={24} /> Goals</Link>
+          <Link to="/user/goals" className={styles.footerLink}><MdList size={24} /> Goals</Link>
           <Link to="/" className={styles.footerLink}><MdHome size={24} /> Home</Link>
         </Stack>
       </footer>

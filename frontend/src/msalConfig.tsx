@@ -2,10 +2,9 @@ import { PublicClientApplication } from "@azure/msal-browser";
 
 const msalConfig = {
   auth: {
-    clientId: "your-client-id",
-    authority: "https://login.microsoftonline.com/your-tenant-id",
-    redirectUri: "your-redirect-uri"
-  }
+    clientId: "bab0cbca-ef97-4e2e-a4f3-672fee2234c7",
+    authority: "https://login.microsoftonline.com/e4cf3bcd-af2d-4529-ba4a-abd9a0a0f0e1",
+    redirectUri: window.location.origin  }
 };
 
 const msalInstance = new PublicClientApplication(msalConfig);

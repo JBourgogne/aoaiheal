@@ -1,3 +1,12 @@
+export interface Answer {
+    shortName: string;
+    questionId: string;
+    questionText: string;
+    answerType: 'single choice' | 'multi-choice' | 'text';
+    options?: string[]; // Present for single choice and multi-choice questions
+    answer: string | string[]; // Could be an array for multi-choice answers
+}
+
 export type AskResponse = {
     answer: string;
     citations: Citation[];
@@ -133,16 +142,6 @@ export enum Feedback {
     Manipulative = "manipulative",
     OtherHarmful = "other_harmlful"
 }
-
-// models.ts
-export interface Answer {
-    shortName: string;
-    questionId: string;
-    questionText: string;
-    answerType: 'single choice' | 'multi-choice' | 'text';
-    options?: string[]; // Present for single choice and multi-choice questions
-    answer: string | string[]; // Could be an array for multi-choice answers
-}
   
 export interface UserDetails {
   userId: string;
@@ -185,4 +184,9 @@ interface Tile {
     type: 'checkbox' | 'percentage' | 'fractional'; // Type of tile
   }
   
+interface claims {
+    oid: string;  // Object ID for Azure AD
+    sub: string;  // Subject - standard JWT field
+    // Add other claims you might need
+  }
   
