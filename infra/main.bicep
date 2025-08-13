@@ -77,7 +77,41 @@ resource openAiResourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' exi
 resource searchServiceResourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (!empty(searchServiceResourceGroupName)) {
   name: !empty(searchServiceResourceGroupName) ? searchServiceResourceGroupName : resourceGroup.name
 }
+# Add to main.bicep
+resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: '${abbrs.insightsComponents}${resourceToken}'
+  location: location
+  tags: tags
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logAnalyticsWorkspace.id
+  }
+}
 
+# Add alerts for production
+resource alertRule 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: 'High Response Time Alert'
+  location: 'global'
+  properties: {
+    severity: 2
+    enabled: true
+    evaluationFrequency: 'PT1M'
+    windowSize: 'PT5M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          name: 'HighResponseTime'
+          metricName: 'http_request_duration_ms'
+          operator: 'GreaterThan'
+          threshold: 2000
+          timeAggregation: 'Average'
+        }
+      ]
+    }
+  }
+}
 
 // Create an App Service Plan to group applications under the same payment plan and SKU
 module appServicePlan 'core/host/appserviceplan.bicep' = {
