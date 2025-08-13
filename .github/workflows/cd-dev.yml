@@ -1,0 +1,53 @@
+name: CD - Deploy to Development
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Azure Developer CLI
+      uses: Azure/setup-azd@v0.1.0
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set up environment variables
+      run: |
+        echo "AZURE_ENV_NAME=healio-dev-${{ github.run_number }}" >> $GITHUB_ENV
+        echo "AZURE_LOCATION=eastus2" >> $GITHUB_ENV
+    
+    - name: Deploy to Development
+      run: |
+        azd env new ${{ env.AZURE_ENV_NAME }} --location ${{ env.AZURE_LOCATION }}
+        azd env set AZURE_OPENAI_SYSTEM_MESSAGE "${{ secrets.DEV_SYSTEM_MESSAGE }}"
+        azd env set AUTH_CLIENT_ID "${{ secrets.DEV_AUTH_CLIENT_ID }}"
+        azd env set AUTH_CLIENT_SECRET "${{ secrets.DEV_AUTH_CLIENT_SECRET }}"
+        azd up --no-prompt
+    
+    - name: Run integration tests
+      run: |
+        export BACKEND_URL=$(azd env get-values --output json | jq -r '.BACKEND_URI')
+        pytest tests/integration/ --backend-url=$BACKEND_URL
+    
+    - name: Run E2E tests
+      run: |
+        cd frontend
+        export REACT_APP_BACKEND_URL=$(azd env get-values --output json | jq -r '.BACKEND_URI')
+        npm run test:e2e
+    
+    - name: Notify deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
