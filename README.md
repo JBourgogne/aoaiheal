@@ -1,164 +1,437 @@
-# [HEAL] Sample Chat App with AOAI
+# [HEAL] # HEALio - AI-Powered Health Assistant
 
-This repo contains sample code for a simple chat webapp that integrates with Azure OpenAI. Note: some portions of the app use preview APIs.
+A comprehensive Azure OpenAI-powered chat application designed to guide users on their health journey. Built with modern cloud-native architecture and enterprise-grade Azure services.
 
-## Prerequisites
-- An existing Azure OpenAI resource and model deployment of a chat model (e.g. `gpt-35-turbo-16k`, `gpt-4`)
-- To use Azure OpenAI on your data: one of the following data sources:
-  - Azure AI Search Index
-  - Azure CosmosDB Mongo vCore vector index
-  - Elasticsearch index (preview)
-  - Pinecone index (preview)
-  - AzureML index (preview)
+## 🌟 Features
 
-## Deploy the app
+- **Intelligent Health Conversations** - AI-powered chat using Azure OpenAI
+- **User Profile Management** - Personalized health tracking and goal setting
+- **Conversation History** - Persistent chat history with CosmosDB
+- **Document Processing** - PDF and document analysis with Form Recognizer
+- **Vector Search** - Advanced search capabilities with Azure Cognitive Search
+- **Multi-Data Source Support** - Azure Search, CosmosDB, Elasticsearch, Pinecone
+- **Enterprise Authentication** - Azure AD integration with EasyAuth
+- **Responsive Frontend** - React-based user interface
+- **Cloud-Native Deployment** - Complete Azure infrastructure automation
 
-#### Local Setup: Basic Chat Experience
-1. Copy `.env.sample` to a new file called `.env` and configure the settings as described in the [Environment variables](#environment-variables) section.
-    
-    These variables are required:
-    - `AZURE_OPENAI_RESOURCE`
-    - `AZURE_OPENAI_MODEL`
-    - `AZURE_OPENAI_KEY`
-
-    These variables are optional:
-    - `AZURE_OPENAI_TEMPERATURE`
-    - `AZURE_OPENAI_TOP_P`
-    - `AZURE_OPENAI_MAX_TOKENS`
-    - `AZURE_OPENAI_STOP_SEQUENCE`
-    - `AZURE_OPENAI_SYSTEM_MESSAGE`
-
-    See the [documentation](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#example-response-2) for more information on these parameters.
-
-2. Start the app with `start.cmd`. This will build the frontend, install backend dependencies, and then start the app. Or, just run the backend in debug mode using the VSCode debug configuration in `.vscode/launch.json`.
-
-3. You can see the local running app at http://127.0.0.1:50505.
-
-#### Local Setup: Chat with your data (Preview)
-[More information about Azure OpenAI on your data](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/concepts/use-your-data)
-
-1. Update the `AZURE_OPENAI_*` environment variables as described above. 
-2. To connect to your data, you need to specify an Azure Cognitive Search index to use. You can [create this index yourself](https://learn.microsoft.com/en-us/azure/search/search-get-started-portal) or use the [Azure AI Studio](https://oai.azure.com/portal/chat) to create the index for you.
-
-    These variables are required when adding your data with Azure AI Search:
-    - `AZURE_SEARCH_SERVICE`
-    - `AZURE_SEARCH_INDEX`
-    - `AZURE_SEARCH_KEY`
-
-    These variables are optional:
-    - `AZURE_SEARCH_USE_SEMANTIC_SEARCH`
-    - `AZURE_SEARCH_SEMANTIC_SEARCH_CONFIG`
-    - `AZURE_SEARCH_INDEX_TOP_K`
-    - `AZURE_SEARCH_ENABLE_IN_DOMAIN`
-    - `AZURE_SEARCH_CONTENT_COLUMNS`
-    - `AZURE_SEARCH_FILENAME_COLUMN`
-    - `AZURE_SEARCH_TITLE_COLUMN`
-    - `AZURE_SEARCH_URL_COLUMN`
-    - `AZURE_SEARCH_VECTOR_COLUMNS`
-    - `AZURE_SEARCH_QUERY_TYPE`
-    - `AZURE_SEARCH_PERMITTED_GROUPS_COLUMN`
-    - `AZURE_SEARCH_STRICTNESS`
-    - `AZURE_OPENAI_EMBEDDING_NAME`
-
-3. Start the app with `start.cmd`. This will build the frontend, install backend dependencies, and then start the app. Or, just run the backend in debug mode using the VSCode debug configuration in `.vscode/launch.json`.
-4. You can see the local running app at http://127.0.0.1:50505.
-
-#### Local Setup: Enable Chat History
-To enable chat history, you will need to set up CosmosDB resources. The ARM template in the `infrastructure` folder can be used to deploy an app service and a CosmosDB with the database and container configured. Then specify these additional environment variables: 
-- `AZURE_COSMOSDB_ACCOUNT`
-- `AZURE_COSMOSDB_DATABASE`
-- `AZURE_COSMOSDB_CONVERSATIONS_CONTAINER`
-- `AZURE_COSMOSDB_ACCOUNT_KEY`
-
-As above, start the app with `start.cmd`, then visit the local running app at http://127.0.0.1:50505. Or, just run the backend in debug mode using the VSCode debug configuration in `.vscode/launch.json`.
-
-#### Local Setup: Enable Message Feedback
-To enable message feedback, you will need to set up CosmosDB resources. Then specify these additional environment variable:
-
-/.env
-- `AZURE_COSMOSDB_ENABLE_FEEDBACK=True`
-
-#### Deploy with the Azure CLI
-**NOTE**: If you've made code changes, be sure to **build the app code** with `start.cmd` or `start.sh` before you deploy, otherwise your changes will not be picked up. If you've updated any files in the `frontend` folder, make sure you see updates to the files in the `static` folder before you deploy.
-
-You can use the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) to deploy the app from your local machine. Make sure you have version 2.48.1 or later.
-
-If this is your first time deploying the app, you can use [az webapp up](https://learn.microsoft.com/en-us/cli/azure/webapp?view=azure-cli-latest#az-webapp-up). Run the following two commands from the root folder of the repo, updating the placeholder values to your desired app name, resource group, location, and subscription. You can also change the SKU if desired.
-
-1. `az webapp up --runtime PYTHON:3.11 --sku B1 --name <new-app-name> --resource-group <resource-group-name> --location <azure-region> --subscription <subscription-name>`
-1. `az webapp config set --startup-file "python3 -m gunicorn app:app" --name <new-app-name>`
-
-If you've deployed the app previously, first run this command to update the appsettings to allow local code deployment:
-
-`az webapp config appsettings set -g <resource-group-name> -n <existing-app-name> --settings WEBSITE_WEBDEPLOY_USE_SCM=false`
-
-Check the runtime stack for your app by viewing the app service resource in the Azure Portal. If it shows "Python - 3.10", use `PYTHON:3.10` in the runtime argument below. If it shows "Python - 3.11", use `PYTHON:3.11` in the runtime argument below. 
-
-Check the SKU in the same way. Use the abbreviated SKU name in the argument below, e.g. for "Basic (B1)" the SKU is `B1`. 
-
-Then, use these commands to deploy your local code to the existing app:
-
-1. `az webapp up --runtime <runtime-stack> --sku <sku> --name <existing-app-name> --resource-group <resource-group-name>`
-1. `az webapp config set --startup-file "python3 -m gunicorn app:app" --name <existing-app-name>`
-
-Make sure that the app name and resource group match exactly for the app that was previously deployed.
-
-Deployment will take several minutes. When it completes, you should be able to navigate to your app at {app-name}.azurewebsites.net.
-
-### Add an identity provider
-After deployment, you will need to add an identity provider to provide authentication support in your app. See [this tutorial](https://learn.microsoft.com/en-us/azure/app-service/scenario-secure-app-authentication-app-service) for more information.
-
-If you don't add an identity provider, the chat functionality of your app will be blocked to prevent unauthorized access to your resources and data. 
-
-To remove this restriction, you can add `AUTH_ENABLED=False` to the environment variables. This will disable authentication and allow anyone to access the chat functionality of your app. **This is not recommended for production apps.**
-
-To add further access controls, update the logic in `getUserInfoList` in `frontend/src/pages/chat/Chat.tsx`. 
-
-### Common Customization Scenarios (e.g. updating the default chat logo and headers)
-
-The interface allows for easy adaptation of the UI by modifying certain elements, such as the title and logo, through the use of [environment variables](#environment-variables).
-
-- `UI_TITLE`
-- `UI_LOGO`
-- `UI_CHAT_TITLE`
-- `UI_CHAT_LOGO`
-- `UI_CHAT_DESCRIPTION`
-- `UI_FAVICON`
-- `UI_SHOW_SHARE_BUTTON`
-
-Feel free to fork this repository and make your own modifications to the UX or backend logic. You can modify the source (`frontend/src`). For example, you may want to change aspects of the chat display, or expose some of the settings in `app.py` in the UI for users to try out different behaviors. After your code changes, you will need to rebuild the front-end via `start.sh` or `start.cmd`.
-
-### Scalability
-You can configure the number of threads and workers in `gunicorn.conf.py`. After making a change, redeploy your app using the commands listed above.
-
-See the [Oryx documentation](https://github.com/microsoft/Oryx/blob/main/doc/configuration.md) for more details on these settings.
-
-
-
-### Configuring vector search
-When using your own data with a vector index, ensure these settings are configured on your app:
-- `AZURE_SEARCH_QUERY_TYPE`: can be `vector`, `vectorSimpleHybrid`, or `vectorSemanticHybrid`,
-- `AZURE_OPENAI_EMBEDDING_NAME`: the name of your Ada (text-embedding-ada-002) model deployment on your Azure OpenAI resource.
-- `AZURE_SEARCH_VECTOR_COLUMNS`: the vector columns in your index to use when searching. Join them with `|` like `contentVector|titleVector`.
-
-### Changing Citation Display
-The Citation panel is defined at the end of `frontend/src/pages/chat/Chat.tsx`. The citations returned from Azure OpenAI On Your Data will include `content`, `title`, `filepath`, and in some cases `url`. You can customize the Citation section to use and display these as you like. For example, the title element is a clickable hyperlink if `url` is not a blob URL.
+## 🏗️ Architecture
 
 ```
-    <h5 
-        className={styles.citationPanelTitle} 
-        tabIndex={0} 
-        title={activeCitation.url && !activeCitation.url.includes("blob.core") ? activeCitation.url : activeCitation.title ?? ""} 
-        onClick={() => onViewSource(activeCitation)}
-    >{activeCitation.title}</h5>
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   React Frontend│    │   Quart Backend  │    │  Azure Services │
+│                 │    │                  │    │                 │
+│ • Chat Interface│◄──►│ • API Routes     │◄──►│ • Azure OpenAI  │
+│ • User Profiles │    │ • Authentication │    │ • CosmosDB      │
+│ • History       │    │ • Data Processing│    │ • Cognitive     │
+│                 │    │                  │    │   Search        │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
 
-    const onViewSource = (citation: Citation) => {
-        if (citation.url && !citation.url.includes("blob.core")) {
-            window.open(citation.url, "_blank");
-        }
-    };
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 16+
+- Azure CLI
+- Azure Developer CLI (azd)
+- Azure subscription with OpenAI access
+
+### Option 1: Azure Developer CLI (Recommended)
+
+1. **Clone and initialize**
+   ```bash
+   git clone <repository>
+   cd healio
+   azd auth login
+   ```
+
+2. **Deploy to Azure**
+   ```bash
+   azd up
+   ```
+   This will:
+   - Provision all Azure resources
+   - Deploy the application
+   - Set up authentication
+   - Configure environment variables
+
+3. **Access your application**
+   ```bash
+   # URL will be displayed after deployment
+   https://your-app-name.azurewebsites.net
+   ```
+
+### Option 2: Local Development
+
+1. **Set environment variables**
+   ```bash
+   export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
+   export AZURE_OPENAI_KEY="your-openai-key"
+   export AZURE_OPENAI_MODEL="your-deployment-name"
+   
+   # Optional: For full functionality
+   export AZURE_COSMOSDB_ACCOUNT_URI="https://your-cosmosdb.documents.azure.com:443/"
+   export AZURE_COSMOSDB_ACCOUNT_KEY="your-cosmosdb-key"
+   export JWT_SECRET="your-secure-secret"
+   ```
+
+2. **Install dependencies and run**
+   ```bash
+   # Install Python dependencies
+   pip install -r requirements.txt
+   
+   # Install and build frontend
+   cd frontend
+   npm install
+   npm run build
+   cd ..
+   
+   # Start the application
+   ./start.sh  # or start.cmd on Windows
+   ```
+
+3. **Access locally**
+   ```
+   http://127.0.0.1:5000
+   ```
+
+### Option 3: Manual Azure Deployment
+
+1. **Create Azure resources**
+   ```bash
+   az deployment group create \
+     --resource-group your-rg \
+     --template-file infrastructure/deployment.json \
+     --parameters @infrastructure/parameters.json
+   ```
+
+2. **Deploy application code**
+   ```bash
+   az webapp up --name your-app-name --resource-group your-rg
+   ```
+
+## 📁 Project Structure
 
 ```
+healio/
+├── 📄 app.py                    # Main Quart application
+├── 📁 backend/                  # Backend modules
+│   ├── 📁 auth/                 # Authentication utilities
+│   │   ├── auth_utils.py        # Azure EasyAuth integration
+│   │   └── sample_user.py       # Development user data
+│   ├── 📁 history/              # Conversation management
+│   │   └── cosmosdbservice.py   # CosmosDB service layer
+│   └── utils.py                 # Response formatting & utilities
+├── 📁 frontend/                 # React frontend (not shown)
+├── 📁 infra/                    # Infrastructure as Code
+│   ├── main.bicep              # Main deployment template
+│   ├── 📁 core/                # Reusable Bicep modules
+│   └── abbreviations.json      # Azure naming conventions
+├── 📁 scripts/                  # Automation & data processing
+│   ├── data_preparation.py     # Document processing
+│   ├── prepdocs.py             # Search index preparation
+│   └── auth_*.py               # Authentication setup
+├── 📁 static/                   # Built frontend assets
+├── requirements.txt             # Python dependencies
+├── start.sh / start.cmd        # Development startup scripts
+└── azure.yaml                  # Azure Developer CLI config
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+#### Required (Minimum functionality)
+```bash
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_KEY=your-openai-key
+AZURE_OPENAI_MODEL=your-deployment-name
+```
+
+#### Optional (Enhanced functionality)
+```bash
+# Database
+AZURE_COSMOSDB_ACCOUNT_URI=https://your-cosmosdb.documents.azure.com:443/
+AZURE_COSMOSDB_ACCOUNT_KEY=your-cosmosdb-key
+AZURE_COSMOSDB_DATABASE=conversations
+AZURE_COSMOSDB_CONVERSATIONS_CONTAINER=conversations
+
+# Search
+AZURE_SEARCH_SERVICE=your-search-service
+AZURE_SEARCH_INDEX=your-index
+AZURE_SEARCH_KEY=your-search-key
+
+# Security
+JWT_SECRET=your-secure-secret-key
+AUTH_ENABLED=true
+
+# UI Customization
+UI_TITLE=HEALio
+UI_CHAT_TITLE=Start chatting with HEAL
+UI_CHAT_DESCRIPTION=This chatbot is configured to guide you on your health journey
+```
+
+### Azure Resources Required
+
+| Service | Purpose | SKU |
+|---------|---------|-----|
+| Azure OpenAI | AI chat functionality | Standard |
+| App Service | Web application hosting | B1+ |
+| CosmosDB | Conversation & user data | Serverless |
+| Cognitive Search | Document search | Standard |
+| Form Recognizer | Document processing | S0 |
+| Application Insights | Monitoring | Free |
+
+## 🔐 Authentication
+
+The application supports Azure AD authentication via EasyAuth:
+
+1. **Development Mode**: Uses sample user data
+2. **Production Mode**: Requires Azure AD app registration
+3. **API Access**: JWT token validation for API endpoints
+
+To disable authentication for testing:
+```bash
+export AUTH_ENABLED=false
+```
+
+## 📊 Data Management
+
+### Document Processing
+
+Process and index documents for search:
+
+```bash
+# Prepare documents for search indexing
+python scripts/data_preparation.py \
+  --config scripts/config.json \
+  --form-rec-resource your-form-recognizer \
+  --form-rec-key your-key \
+  --embedding-model-endpoint your-embedding-endpoint \
+  --embedding-model-key your-embedding-key
+```
+
+### Conversation History
+
+Conversations are automatically stored in CosmosDB when configured:
+- User conversations with full message history
+- Message feedback and ratings
+- Conversation titles and metadata
+
+### User Profiles
+
+User data management includes:
+- Health questionnaire responses
+- Personal health goals
+- Conversation preferences
+- Progress tracking
+
+## 🎨 Customization
+
+### UI Theming
+
+Customize the interface via environment variables:
+
+```bash
+UI_TITLE="Your Health Assistant"
+UI_LOGO="https://your-domain.com/logo.png"
+UI_CHAT_TITLE="Welcome to your health journey"
+UI_CHAT_DESCRIPTION="Ask me anything about your health"
+UI_SHOW_SHARE_BUTTON=true
+```
+
+### AI Behavior
+
+Adjust AI responses:
+
+```bash
+AZURE_OPENAI_TEMPERATURE=0.7     # Creativity (0-2)
+AZURE_OPENAI_MAX_TOKENS=1000     # Response length
+AZURE_OPENAI_SYSTEM_MESSAGE="You are a helpful health assistant..."
+```
+
+## 🚀 Deployment
+
+### Production Deployment
+
+1. **Using Azure Developer CLI**
+   ```bash
+   azd up --environment production
+   ```
+
+2. **Configure custom domain**
+   ```bash
+   az webapp config hostname add \
+     --webapp-name your-app \
+     --resource-group your-rg \
+     --hostname your-domain.com
+   ```
+
+3. **Enable SSL**
+   ```bash
+   az webapp config ssl bind \
+     --certificate-thumbprint your-cert \
+     --ssl-type SNI \
+     --name your-app \
+     --resource-group your-rg
+   ```
+
+### Scaling Configuration
+
+Update `gunicorn.conf.py` for production workloads:
+
+```python
+bind = "0.0.0.0:8000"
+workers = 4
+worker_class = "uvicorn.workers.UvicornWorker"
+worker_connections = 1000
+max_requests = 1000
+max_requests_jitter = 100
+timeout = 120
+```
+
+## 🔍 Monitoring
+
+### Application Insights
+
+Monitor application performance:
+- Request/response times
+- Error rates and exceptions
+- User engagement metrics
+- Custom health metrics
+
+### Health Checks
+
+Built-in health endpoints:
+- `/frontend_settings` - Configuration status
+- `/history/ensure` - Database connectivity
+
+## 🧪 Testing
+
+### API Testing
+
+Test chat functionality:
+```bash
+# Health check
+curl http://localhost:5000/frontend_settings
+
+# Chat test
+curl -X POST http://localhost:5000/conversation \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello, can you help me with my health?"}]}'
+```
+
+### Load Testing
+
+Use Azure Load Testing or tools like Artillery:
+```bash
+# Install Artillery
+npm install -g artillery
+
+# Run load test
+artillery quick --count 10 --num 5 http://your-app.azurewebsites.net
+```
+
+## 🛠️ Development
+
+### Local Development Setup
+
+1. **Backend development**
+   ```bash
+   python -m uvicorn app:app --reload --port 5000
+   ```
+
+2. **Frontend development**
+   ```bash
+   cd frontend
+   npm start  # Runs on port 3000
+   ```
+
+3. **Database development**
+   ```bash
+   # Use Cosmos DB Emulator for local development
+   docker run -p 8081:8081 -p 10251:10251 -p 10252:10252 -p 10253:10253 -p 10254:10254 \
+     mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator
+   ```
+
+### Adding New Features
+
+1. **New API endpoints**: Add to `app.py` with proper blueprints
+2. **Database models**: Extend CosmosDB service in `backend/history/`
+3. **UI components**: Add to React frontend
+4. **Infrastructure**: Update Bicep templates in `infra/`
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Application won't start**
+- Check required environment variables are set
+- Verify Azure OpenAI credentials
+- Review application logs
+
+**CosmosDB connection errors**
+- Verify account URI and key
+- Check firewall settings
+- Ensure containers exist
+
+**Authentication issues**
+- Verify Azure AD app registration
+- Check redirect URIs
+- Review EasyAuth configuration
+
+**Search not working**
+- Verify search service credentials
+- Check index exists and has data
+- Review search configuration
+
+### Debug Mode
+
+Enable detailed logging:
+```bash
+export DEBUG=true
+python app.py
+```
+
+### Logs
+
+View application logs:
+```bash
+# Azure App Service
+az webapp log tail --name your-app --resource-group your-rg
+
+# Local development
+tail -f app.log
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+- **Documentation**: Check the `/scripts/readme.md` for detailed setup instructions
+- **Issues**: Create an issue in the repository
+- **Azure Support**: Contact Azure support for service-related issues
+
+## 🙏 Acknowledgments
+
+- Built on Microsoft's Azure OpenAI sample architecture
+- Uses Azure Developer CLI for seamless deployment
+- Inspired by modern healthcare AI applications
+
+---
+
+**Ready to transform healthcare with AI? Get started with HEALio today!** 🏥✨
 
 
 ### Best Practices
