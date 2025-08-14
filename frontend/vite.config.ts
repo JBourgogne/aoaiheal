@@ -1,18 +1,30 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [react()],
-    build: {
-        outDir: "../static",
-        emptyOutDir: true,
-        sourcemap: true
+  plugins: [react()],
+  base: './',
+  build: {
+    outDir: '../static',
+    emptyOutDir: true,
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: undefined,
+      }
     },
-    server: {
-        proxy: {
-            "/ask": "http://localhost:5000",
-            "/chat": "http://localhost:5000"
-        }
+    chunkSizeWarningLimit: 1000
+  },
+  resolve: {
+    alias: {
+      '@': '/src'
     }
-});
+  },
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom']
+  }
+})
