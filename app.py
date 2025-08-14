@@ -519,6 +519,9 @@ def create_app():
     
     return app
 
+# Create the app instance for gunicorn
+app = create_app()
+
 # Required environment variables check
 REQUIRED_ENV_VARS = [
     "AZURE_OPENAI_ENDPOINT",
