@@ -1,31 +1,23 @@
 FROM node:20-alpine AS frontend  
 
-# Create app directory and set permissions
-WORKDIR /home/node/app
-RUN chown -R node:node /home/node/app
+WORKDIR /app/frontend
 
-# Switch to node user BEFORE copying files
-USER node
+# Copy package files
+COPY ./frontend/package*.json ./
 
-# Copy package files first for better caching
-COPY --chown=node:node ./frontend/package*.json ./frontend/
-
-# Change to frontend directory and install dependencies
-WORKDIR /home/node/app/frontend
+# Install dependencies as root (simpler)
 RUN npm ci || npm install
 
-# Copy frontend source code
-COPY --chown=node:node ./frontend/ ./
+# Copy source and build
+COPY ./frontend/ ./
+RUN npm run build || echo "Build failed, continuing..."
 
-# Build frontend
-RUN npm run build || (echo "Frontend build failed, creating empty dist" && mkdir -p dist)
-
-# Create static directory and copy build output
-RUN mkdir -p ../static && (cp -r dist/* ../static/ 2>/dev/null || echo "No dist files to copy")
+# Ensure static directory exists
+RUN mkdir -p /app/static
+RUN cp -r dist/* /app/static/ 2>/dev/null || echo "No build output to copy"
 
 FROM python:3.11-alpine 
 
-# Install system dependencies
 RUN apk add --no-cache --virtual .build-deps \  
     build-base \  
     libffi-dev \  
@@ -34,18 +26,17 @@ RUN apk add --no-cache --virtual .build-deps \
     && apk add --no-cache \  
     libpq 
   
-# Install Python dependencies
 COPY requirements.txt /usr/src/app/  
 RUN pip install --no-cache-dir -r /usr/src/app/requirements.txt \  
     && rm -rf /root/.cache  
   
-# Copy application code
 COPY . /usr/src/app/  
-
-# Copy built frontend static files
-COPY --from=frontend /home/node/app/static /usr/src/app/static/
+COPY --from=frontend /app/static /usr/src/app/static/
 
 WORKDIR /usr/src/app  
-EXPOSE 80  
 
-CMD ["gunicorn", "-b", "0.0.0.0:80", "app:app"]
+# Azure App Service expects port 8000
+EXPOSE 8000  
+
+# Use port 8000 for gunicorn
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:app"]
