@@ -44,4 +44,4 @@ jobs:
 
     - name: Deploy to Azure App Service
       run: |
-        az webapp up --runtime PYTHON:3.11 --sku B1 --name healio25 --resource-group heal
+        az webapp up --runtime PYTHON:3.11 --sku B1 --name healior --resource-group heal
