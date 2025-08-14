@@ -25,7 +25,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
     
     - name: Install dependencies
       run: |
@@ -42,12 +42,16 @@ jobs:
     - name: Type check with mypy
       run: mypy app.py backend/ || echo "MyPy check completed with warnings"
     
-    - name: Test with pytest
+    - name: Test with pytest (if tests exist)
       run: |
-        pytest tests/ --cov=backend --cov-report=xml --cov-report=html || echo "Tests completed"
+        if [ -d "tests" ]; then
+          pytest tests/ --cov=backend --cov-report=xml --cov-report=html
+        else
+          echo "No tests directory found, skipping tests"
+        fi
     
     - name: Upload coverage to Codecov
-      if: success()
+      if: success() && hashFiles('coverage.xml') != ''
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
@@ -84,19 +88,21 @@ jobs:
       with:
         python-version: "3.11"
     
+    - name: Install security tools
+      run: |
+        pip install bandit safety
+    
     - name: Run Bandit security scan
       run: |
-        pip install bandit
         bandit -r backend/ -f json -o bandit-report.json || echo "Bandit scan completed"
     
     - name: Run Safety check
       run: |
-        pip install safety
         safety check --json --output safety-report.json || echo "Safety check completed"
     
     - name: Upload security reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # ← UPDATED to v4
       with:
         name: security-reports
         path: |
