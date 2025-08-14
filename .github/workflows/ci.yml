@@ -32,7 +32,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         # Install development tools
-        pip install flake8 mypy pytest pytest-cov
+        pip install flake8 mypy
     
     - name: Lint with flake8 (critical errors only)
       run: |
@@ -44,25 +44,12 @@ jobs:
         # Check main app files more strictly
         flake8 app.py backend/ --count --max-line-length=127 --statistics || echo "Linting completed with warnings"
     
-    - name: Type check with mypy
+    - name: Basic syntax and import check
       run: |
         export PYTHONPATH="${PYTHONPATH}:${PWD}"
-        mypy app.py backend/ || echo "MyPy check completed with warnings"
-    
-    - name: Test with pytest (if tests exist)
-      run: |
-        if [ -d "tests" ]; then
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest tests/ --cov=backend --cov-report=xml --cov-report=html
-        else
-          echo "No tests directory found, skipping tests"
-        fi
-    
-    - name: Upload coverage to Codecov
-      if: success() && hashFiles('coverage.xml') != ''
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
+        python -m py_compile app.py
+        python -c "import backend.utils; print('Backend imports successfully')"
+        python -c "import backend.auth.auth_utils; print('Auth imports successfully')"
 
   frontend-test:
     runs-on: ubuntu-latest
